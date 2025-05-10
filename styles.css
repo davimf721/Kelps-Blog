@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+
+/* ==================== BASE ==================== */
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #000000;
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    background-color: #e0e0e0;
+    animation: fadeIn 1s ease-in;
+}
+
+header {
+    background: linear-gradient(to right, #302eb3, #0ae9e9);
+    color: rgb(255, 255, 255);
+    padding: 5px 10px;
+    text-align: center;
+    border-bottom: 5px solid #282641;
+    font-size: 14px;
+}
+
+/* ==================== NAVEGAÇÃO ==================== */
+nav {
+    background: #282641;
+    padding: 1px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+nav a {
+    color: rgb(255, 255, 255);
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+nav a:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+/* ==================== CARDS DE ONG ==================== */
+.card {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 200px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUp 0.6s forwards;
+}
+
+.card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #000000;
+}
+
+.card p {
+    font-size: 14px;
+    color: #3d3d3d;
+    margin-bottom: 10px;
+}
+
+.card button {
+    background-color: #212230;
+    color: rgb(0, 225, 255);
+    font-weight: bold;
+    border: none;
+    padding: 12px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 20px;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    width: 100%;
+}
+
+.card button:hover {
+    background-color: #357ab7;
+    transform: scale(1.05);
+}
+
+/* ==================== CONTAINERS ==================== */
+.container {
+    padding: 30px;
+}
+
+.ongs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 30px;
+    animation: fadeIn 1s ease-in;
+}
+
+/* ==================== FORMULÁRIO DE CADASTRO ==================== */
+.form-section {
+    max-width: 300px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-section form {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-section label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-section input {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* ==================== INPUTS GERAIS ==================== */
+input {
+    padding: 15px;
+    width: flex;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-color: #4a90e2;
+    outline: none;
+}
+
+/* ==================== BOTÃO GERAL ==================== */
+button {
+    padding: 10px;
+    margin: 5px;
+    background-color: #212230;
+    font-family: 'Poppins', sans-serif;
+    color: rgb(0, 225, 255);
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0055aa;
+}
+
+/* ==================== RODAPÉ ==================== */
+footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 10px;
+    margin: 0;
+    padding: 0;
+    color: #555;
+}
+
+/* ==================== ANIMAÇÕES ==================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+
+/*==========AULA 08=========*/
+
+@media (max-width: 600px) {
+    nav ul {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    header {
+        padding: 20px 20px;
+    }
+
+    .form-section {
+        padding: 20px;
+
+    }
+
+
+
+    
+}
+
+
+
