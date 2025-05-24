@@ -62,8 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
         // Escapar conteúdo para prevenir SQL injection
         $comment_content = pg_escape_string($dbconn, $comment_content);
         $user_id = $_SESSION['user_id'];
-        
-        $insert_query = "INSERT INTO comments (post_id, user_id, content) VALUES ($post_id, $user_id, '$comment_content')";
+        $parent_id = isset($_POST['parent_id']) && is_numeric($_POST['parent_id']) ? (int)$_POST['parent_id'] : 'NULL';
+
+        $insert_query = "INSERT INTO comments (post_id, user_id, content, parent_id) VALUES ($post_id, $user_id, '$comment_content', $parent_id)";
         $insert_result = pg_query($dbconn, $insert_query);
         
         if ($insert_result) {
@@ -356,6 +357,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
             color: #0a6aa8;
             text-decoration: underline;
         }
+        
+        .replies {
+            margin-left: 20px;
+            border-left: 2px solid #333;
+            padding-left: 15px;
+            margin-top: 10px;
+        }
+
+        .comment-reply {
+            background-color: #222;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-comment-btn,
+        .reply-comment-btn {
+            background: none;
+            border: none;
+            color: #0e86ca;
+            cursor: pointer;
+            font-size: 0.85em;
+            padding: 0;
+        }
+
+        .delete-comment-btn:hover {
+            color: #ff6b6b;
+            text-decoration: underline;
+        }
+
+        .reply-comment-btn:hover {
+            color: #69db7c;
+            text-decoration: underline;
+        }
+
+        #parent_id {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -442,11 +483,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
                         </div>
                     <?php endif; ?>
                     
-                    <form method="post" action="post.php?id=<?php echo $post_id; ?>">
-                        <textarea name="comment_content" placeholder="Digite seu comentário aqui..." required></textarea>
-                        <button type="submit">
-                            <i class="far fa-paper-plane"></i> Enviar Comentário
-                        </button>
+                    <form id="comment-form">
+                        <textarea name="content" required></textarea>
+                        <input type="hidden" name="parent_id" id="parent_id" value="">
+                        <button type="submit">Comentar</button>
                     </form>
                 </div>
             <?php else: ?>
@@ -467,6 +507,109 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Função para construir a árvore de comentários
+        function buildCommentTree(comments) {
+            const map = {};
+            const roots = [];
+            
+            comments.forEach(c => {
+                c.replies = [];
+                map[c.id] = c;
+            });
+            
+            comments.forEach(c => {
+                if (c.parent_id && map[c.parent_id]) {
+                    map[c.parent_id].replies.push(c);
+                } else {
+                    roots.push(c);
+                }
+            });
+            
+            return roots;
+        }
+        
+        // Função para renderizar comentários
+        function renderComment(comment, container, isReply = false) {
+            const div = document.createElement('div');
+            div.className = 'comment' + (isReply ? ' comment-reply' : '');
+            div.setAttribute('data-comment-id', comment.id);
+            
+            div.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${comment.username}</span>
+                    <span class="comment-date">${new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+                    <div class="comment-actions">
+                        ${comment.can_delete ? '<button class="delete-comment-btn">Excluir</button>' : ''}
+                        <button class="reply-comment-btn">Responder</button>
+                    </div>
+                </div>
+                <div class="comment-content">${comment.content.replace(/\n/g, '<br>')}</div>
+                <div class="replies"></div>
+            `;
+            
+            container.appendChild(div);
+            
+            // Renderizar respostas recursivamente
+            if (comment.replies && comment.replies.length > 0) {
+                const repliesContainer = div.querySelector('.replies');
+                comment.replies.forEach(reply => {
+                    renderComment(reply, repliesContainer, true);
+                });
+            }
+        }
+        
+        // Função para buscar e exibir comentários
+        function fetchComments() {
+            fetch('fetch_comments.php?post_id=<?php echo $post_id; ?>')
+                .then(response => response.json())
+                .then(comments => {
+                    const commentsList = document.querySelector('.comments-list');
+                    commentsList.innerHTML = '';
+                    
+                    if (comments.length === 0) {
+                        commentsList.innerHTML = '<div class="no-comments"><p><i class="far fa-comment-dots"></i> Nenhum comentário ainda. Seja o primeiro a comentar!</p></div>';
+                    } else {
+                        const tree = buildCommentTree(comments);
+                        tree.forEach(comment => {
+                            renderComment(comment, commentsList);
+                        });
+                    }
+                });
+        }
+        
+        // Inicializar comentários e atualizar periodicamente
+        fetchComments();
+        const commentInterval = setInterval(fetchComments, 10000); // Atualiza a cada 10s
+        
+        // Handler para formulário de comentários
+        document.getElementById('comment-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const content = this.querySelector('textarea[name="content"]').value.trim();
+            const parentId = document.getElementById('parent_id').value;
+            
+            if (!content) return;
+            
+            fetch('add_comment.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `post_id=<?php echo $post_id; ?>&content=${encodeURIComponent(content)}&parent_id=${parentId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Limpar o formulário
+                    this.querySelector('textarea[name="content"]').value = '';
+                    document.getElementById('parent_id').value = '';
+                    
+                    // Atualizar comentários imediatamente
+                    fetchComments();
+                } else {
+                    alert(data.message || 'Erro ao adicionar comentário.');
+                }
+            });
+        });
+        
         // Adicionar listener para o botão de upvote
         const upvoteButton = document.querySelector('.upvote-button');
         
@@ -480,22 +623,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
                 const postId = this.getAttribute('data-post-id');
                 const upvoteCount = this.querySelector('.upvote-count');
                 
-                // Enviar solicitação AJAX para processar o upvote
-                const formData = new FormData();
-                formData.append('post_id', postId);
-                
                 fetch('upvote.php', {
                     method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'post_id=' + postId
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Atualizar o contador de upvotes
                         upvoteCount.textContent = data.count;
                         
-                        // Alternar a classe 'upvoted' para feedback visual
                         if (data.action === 'added') {
                             this.classList.add('upvoted');
                         } else {
@@ -504,54 +641,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
                     } else {
                         alert(data.message);
                     }
-                })
-                .catch(error => {
-                    console.error('Erro ao processar upvote:', error);
-                    alert('Ocorreu um erro ao processar seu upvote');
                 });
             });
         }
         
-        // Se houver um parâmetro comment_added=true, role até a seção de comentários
-        if (window.location.search.includes('comment_added=true')) {
-            document.querySelector('.comments-section').scrollIntoView({ behavior: 'smooth' });
-        }
+        // Event delegation para botões de excluir e responder comentários
+        document.addEventListener('click', function(e) {
+            // Excluir comentário
+            if (e.target.classList.contains('delete-comment-btn')) {
+                const commentDiv = e.target.closest('.comment');
+                const commentId = commentDiv.getAttribute('data-comment-id');
+                
+                if (confirm('Deseja excluir este comentário?')) {
+                    fetch('delete_comment.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'comment_id=' + commentId
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            fetchComments(); // Atualizar toda a árvore de comentários
+                        } else {
+                            alert(data.message);
+                        }
+                    });
+                }
+            }
+            
+            // Responder comentário
+            if (e.target.classList.contains('reply-comment-btn')) {
+                const commentDiv = e.target.closest('.comment');
+                const commentId = commentDiv.getAttribute('data-comment-id');
+                const authorName = commentDiv.querySelector('.comment-author').textContent;
+                
+                document.getElementById('parent_id').value = commentId;
+                const textarea = document.querySelector('#comment-form textarea');
+                textarea.value = `@${authorName} `;
+                textarea.focus();
+                
+                // Scroll suave até o formulário
+                document.querySelector('.comment-form').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
         
-        function fetchComments() {
-            fetch('fetch_comments.php?post_id=<?php echo $post_id; ?>')
+        // Função para buscar upvotes
+        function fetchUpvotes() {
+            fetch('fetch_upvotes.php?post_id=<?php echo $post_id; ?>')
                 .then(response => response.json())
-                .then(comments => {
-                    const commentsList = document.querySelector('.comments-list');
-                    commentsList.innerHTML = '';
-                    if (comments.length === 0) {
-                        commentsList.innerHTML = '<div class="no-comments"><p><i class="far fa-comment-dots"></i> Nenhum comentário ainda. Seja o primeiro a comentar!</p></div>';
-                    } else {
-                        comments.forEach(comment => {
-                            commentsList.innerHTML += `
-                                <div class="comment">
-                                    <div class="comment-header">
-                                        <span class="comment-author">${comment.username}</span>
-                                        <span class="comment-date">${new Date(comment.created_at).toLocaleString('pt-BR')}</span>
-                                    </div>
-                                    <div class="comment-content">${comment.content.replace(/\n/g, '<br>')}</div>
-                                </div>
-                            `;
-                        });
-                    }
+                .then(data => {
+                    document.querySelector('.upvote-count').textContent = data.upvotes;
                 });
         }
-        setInterval(fetchComments, 10000); // Atualiza a cada 10s
+        setInterval(fetchUpvotes, 5000); // Atualiza a cada 5s
     });
     </script>
-    <script>
-function fetchUpvotes() {
-    fetch('fetch_upvotes.php?post_id=<?php echo $post_id; ?>')
-        .then(response => response.json())
-        .then(data => {
-            document.querySelector('.upvote-count').textContent = data.upvotes;
-        });
-}
-setInterval(fetchUpvotes, 5000); // Atualiza a cada 5s
-</script>
 </body>
 </html>

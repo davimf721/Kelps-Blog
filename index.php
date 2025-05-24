@@ -128,6 +128,58 @@ $parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        /* Substitua o CSS atual dos upvotes por este */
+        .upvote-btn {
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            padding: 8px 15px;
+            transition: all 0.2s ease;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .upvote-btn:hover {
+            background-color: #444;
+            color: #fff;
+        }
+
+        .upvote-btn i {
+            color: #0e86ca;
+        }
+
+        .upvote-active {
+            background-color: #0056b3;
+            color: white;
+            animation: pulse 0.5s;
+        }
+
+        .upvote-active i {
+            color: white;
+        }
+
+        .upvote-count {
+            display: inline-block;
+            min-width: 20px;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); }
+            100% { transform: scale(1); }
+        }
+
+        .upvote-btn[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -174,58 +226,13 @@ $parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
     </footer>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Adicionar listeners para os botões de upvote
-        const upvoteButtons = document.querySelectorAll('.upvote-button');
-        
-        upvoteButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                if (this.hasAttribute('disabled')) {
-                    alert('Você precisa estar logado para dar upvote');
-                    return;
-                }
-                
-                const postId = this.getAttribute('data-post-id');
-                const upvoteCount = this.querySelector('.upvote-count');
-                
-                // Enviar solicitação AJAX para processar o upvote
-                const formData = new FormData();
-                formData.append('post_id', postId);
-                
-                fetch('upvote.php', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Atualizar o contador de upvotes
-                        upvoteCount.textContent = data.count;
-                        
-                        // Alternar a classe 'upvoted' para feedback visual
-                        if (data.action === 'added') {
-                            this.classList.add('upvoted');
-                        } else {
-                            this.classList.remove('upvoted');
-                        }
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao processar upvote:', error);
-                    alert('Ocorreu um erro ao processar seu upvote');
-                });
-            });
-        });
-    });
-
+document.addEventListener('DOMContentLoaded', function() {
     async function fetchAndDisplayPosts() {
         const container = document.getElementById('posts-container');
         const response = await fetch('fetch_posts.php');
         const posts = await response.json();
         container.innerHTML = '';
+        
         posts.forEach(post => {
             container.innerHTML += `
                 <article class="post-summary">
@@ -233,28 +240,72 @@ $parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
                     <p class="post-meta">Por: ${post.author} em ${new Date(post.created_at).toLocaleString('pt-BR')}</p>
                     <p>${post.content.substring(0, 150)}...</p>
                     <div class="post-metrics">
-                        <span class="upvotes-count" data-post-id="${post.id}">Upvotes: ${post.upvotes_count}</span> |
-                        <span>Comentários: ${post.comments_count}</span>
+                        <button class="upvote-btn" data-post-id="${post.id}" 
+                                ${!<?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?> ? 'disabled title="Faça login para dar upvote"' : ''}>
+                            <i class="fas fa-arrow-up"></i>
+                            <span class="upvote-count">${post.upvotes_count}</span>
+                        </button>
+                        <span class="comment-count"><i class="far fa-comment"></i> ${post.comments_count} comentários</span>
                     </div>
                     <a href="post.php?id=${post.id}" class="action-button">Leia mais</a>
                 </article>
             `;
         });
     }
+    
+    // Delegação de eventos para botões de upvote
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('.upvote-btn')) {
+            const button = event.target.closest('.upvote-btn');
+            
+            if (button.hasAttribute('disabled')) {
+                alert('Você precisa estar logado para dar upvote');
+                return;
+            }
+            
+            const postId = button.getAttribute('data-post-id');
+            
+            fetch('upvote.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'post_id=' + postId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Atualiza o contador de upvotes diretamente
+                    const upvoteCount = button.querySelector('.upvote-count');
+                    if (upvoteCount) upvoteCount.textContent = data.count;
+                    
+                    // Feedback visual
+                    if (data.action === 'added') {
+                        button.classList.add('upvote-active');
+                    } else {
+                        button.classList.remove('upvote-active');
+                    }
+                } else {
+                    alert(data.message || 'Você precisa estar logado para votar.');
+                }
+            });
+        }
+    });
+    
     fetchAndDisplayPosts();
     setInterval(fetchAndDisplayPosts, 10000); // Atualiza a cada 10s
-
+    
     function updateAllUpvotes() {
-        document.querySelectorAll('.upvotes-count').forEach(span => {
-            const postId = span.getAttribute('data-post-id');
+        document.querySelectorAll('.upvote-btn').forEach(button => {
+            const postId = button.getAttribute('data-post-id');
             fetch('fetch_upvotes.php?post_id=' + postId)
                 .then(response => response.json())
                 .then(data => {
-                    span.textContent = 'Upvotes: ' + data.upvotes;
+                    const upvoteCount = button.querySelector('.upvote-count');
+                    if (upvoteCount) upvoteCount.textContent = data.upvotes;
                 });
         });
     }
     setInterval(updateAllUpvotes, 5000);
-    </script>
+});
+</script>
 </body>
 </html>
