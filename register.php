@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'includes/db_connect.php'; // Certifique-se que o caminho está correto
 
 $errors = [];
@@ -66,14 +68,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
 </head>
-<body>
+<body class="auth-page">
     <header>
-        <!-- Seu cabeçalho aqui, pode incluir navegação -->
         <h1>Criar uma Conta</h1>
     </header>
 
-    <main>
-        <section class="auth-section"> <!-- ou auth-container, conforme seu CSS -->
+    <main class="auth-main">
+        <section class="auth-section">
+            <!-- Mensagens de erro -->
             <?php if (!empty($errors)): ?>
                 <div class="message error">
                     <?php foreach ($errors as $error): ?>
@@ -82,6 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
             <?php endif; ?>
 
+            <!-- Formulário de registro -->
             <form id="register-form" method="POST" action="register.php">
                 <div>
                     <label for="username">Nome de Usuário:</label>
@@ -95,20 +98,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <label for="password">Senha:</label>
                     <input type="password" id="password" name="password" required>
                 </div>
-                <button type="submit">Registrar</button>
-                <div id="register-message" class="message">
-                    <!-- Mensagens de JS podem ser removidas ou adaptadas -->
-                </div>
+                <button type="submit">REGISTRAR</button>
             </form>
             <p>Já tem uma conta? <a href="login.php">Faça login aqui</a>.</p>
-            <p><a href="index.php" class="back-link">Voltar para Home</a></p>
+            <a href="index.php" class="back-link">Voltar para Home</a>
         </section>
     </main>
 
     <footer>
-        <p>&copy; <?php echo date("Y"); ?> Kelps Blog. All rights reserved.</p>
+        <p>&copy; <?php echo date('Y'); ?> Kelps Blog. All rights reserved.</p>
     </footer>
-    <!-- O script auth.js pode precisar de ajustes ou ser removido se toda a lógica for PHP -->
-    <!-- <script src="js/auth.js"></script> -->
 </body>
 </html>

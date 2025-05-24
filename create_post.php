@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'includes/db_connect.php';
 
 // Verificar se o usuário está logado
@@ -250,6 +252,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .preview-content table td {
             border: 1px solid #ccc;
             padding: 0.5em;
+        }
+        /* Estilo para links nos posts */
+        .post-content a,
+        .markdown-preview a {
+            color: #4db6ac; /* Verde-azulado claro */
+            text-decoration: none;
+            border-bottom: 1px dotted #4db6ac;
+            transition: all 0.2s ease;
+        }
+
+        .post-content a:hover,
+        .markdown-preview a:hover {
+            color: #80cbc4; /* Verde-azulado mais claro ao passar o mouse */
+            border-bottom: 1px solid #80cbc4;
+        }
+
+        /* Garantir a legibilidade dos links em áreas de preview */
+        .markdown-preview a {
+            font-weight: 500;
+        }
+
+        /* Assegurar que links em códigos e blocos de código mantenham aparência consistente */
+        pre a, code a {
+            color: inherit;
+            border-bottom: none;
+        }
+
+        /* Estilo para links visitados */
+        .post-content a:visited,
+        .markdown-preview a:visited {
+            color: #9575cd; /* Roxo lavanda */
         }
     </style>
 </head>
