@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 // fetch_comments.php
 require_once 'includes/db_connect.php';
 $post_id = (int)$_GET['post_id'];
