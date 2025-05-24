@@ -166,67 +166,7 @@ $parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
             </div>
         <?php endif; ?>
         
-        <section id="posts-container">
-            <h2>Blog Posts</h2>
-            <?php
-            // Buscar posts do banco de dados - Consulta atualizada para incluir contagem de comentários
-            $query = "SELECT p.id, p.title, p.content, p.created_at, u.username AS author, p.upvotes_count,
-                       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
-                      FROM posts p
-                      JOIN users u ON p.user_id = u.id
-                      ORDER BY p.created_at DESC";
-            
-            $result = pg_query($dbconn, $query);
-
-            if ($result && pg_num_rows($result) > 0) {
-                while ($post = pg_fetch_assoc($result)) {
-                    // Converte markdown para HTML e depois remove as tags para o resumo
-                    $html_content = $parsedown->text($post['content']);
-                    $plain_content = strip_tags($html_content);
-                    $summary = mb_substr($plain_content, 0, 150);
-                    if (mb_strlen($plain_content) > 150) {
-                        $summary .= "...";
-                    }
-                    
-                    // Verifica se o usuário atual já deu upvote neste post
-                    $has_upvoted = false;
-                    if (isset($_SESSION['user_id'])) {
-                        $upvote_check = "SELECT id FROM post_upvotes WHERE post_id = {$post['id']} AND user_id = {$_SESSION['user_id']}";
-                        $upvote_result = pg_query($dbconn, $upvote_check);
-                        $has_upvoted = $upvote_result && pg_num_rows($upvote_result) > 0;
-                    }
-            ?>
-                <article class="post-summary">
-                    <h3><a href="post.php?id=<?php echo $post['id']; ?>"><?php echo htmlspecialchars($post['title']); ?></a></h3>
-                    <p class="post-meta">Por: <?php echo htmlspecialchars($post['author']); ?> em <?php echo date('d/m/Y H:i', strtotime($post['created_at'])); ?></p>
-                    <p><?php echo htmlspecialchars($summary); ?></p>
-                    
-                    <div class="post-metrics">
-                        <button class="upvote-button <?php echo $has_upvoted ? 'upvoted' : ''; ?>" 
-                                data-post-id="<?php echo $post['id']; ?>"
-                                <?php echo !isset($_SESSION['user_id']) ? 'disabled title="Faça login para dar upvote"' : ''; ?>>
-                            <i class="fas fa-arrow-up upvote-icon"></i>
-                            <span class="upvote-count"><?php echo $post['upvotes_count']; ?></span>
-                        </button>
-                        
-                        <a href="post.php?id=<?php echo $post['id']; ?>#comments" class="metric-button">
-                            <i class="far fa-comment"></i>
-                            <span><?php echo $post['comments_count']; ?></span>
-                            <?php echo $post['comments_count'] == 1 ? 'comentário' : 'comentários'; ?>
-                        </a>
-                    </div>
-                    
-                    <div class="post-actions">
-                        <a href="post.php?id=<?php echo $post['id']; ?>" class="action-button">Leia mais</a>
-                    </div>
-                </article>
-            <?php
-                }
-            } else {
-                echo "<p>Nenhum post encontrado.</p>";
-            }
-            ?>
-        </section>
+        <section id="posts-container"></section>
     </main>
 
     <footer>
@@ -280,6 +220,41 @@ $parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
             });
         });
     });
+
+    async function fetchAndDisplayPosts() {
+        const container = document.getElementById('posts-container');
+        const response = await fetch('fetch_posts.php');
+        const posts = await response.json();
+        container.innerHTML = '';
+        posts.forEach(post => {
+            container.innerHTML += `
+                <article class="post-summary">
+                    <h3><a href="post.php?id=${post.id}">${post.title}</a></h3>
+                    <p class="post-meta">Por: ${post.author} em ${new Date(post.created_at).toLocaleString('pt-BR')}</p>
+                    <p>${post.content.substring(0, 150)}...</p>
+                    <div class="post-metrics">
+                        <span class="upvotes-count" data-post-id="${post.id}">Upvotes: ${post.upvotes_count}</span> |
+                        <span>Comentários: ${post.comments_count}</span>
+                    </div>
+                    <a href="post.php?id=${post.id}" class="action-button">Leia mais</a>
+                </article>
+            `;
+        });
+    }
+    fetchAndDisplayPosts();
+    setInterval(fetchAndDisplayPosts, 10000); // Atualiza a cada 10s
+
+    function updateAllUpvotes() {
+        document.querySelectorAll('.upvotes-count').forEach(span => {
+            const postId = span.getAttribute('data-post-id');
+            fetch('fetch_upvotes.php?post_id=' + postId)
+                .then(response => response.json())
+                .then(data => {
+                    span.textContent = 'Upvotes: ' + data.upvotes;
+                });
+        });
+    }
+    setInterval(updateAllUpvotes, 5000);
     </script>
 </body>
 </html>
