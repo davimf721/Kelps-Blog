@@ -10,43 +10,66 @@ body {
     min-height: 100vh;
 }
 
-/* Header e navegação */
+/* Header e navegação - Estilos base (alguns movidos do index.php) */
 header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    position: relative; /* Para posicionamento absoluto do título, se usado */
     background-color: #2B2B2B;
     color: white;
-    padding: 20px;
-    text-align: center;
-    position: relative;
-    min-height: 50px;
+    min-height: 60px; /* Ajuste conforme necessário */
+    flex-wrap: wrap; /* Permite que os itens quebrem linha se necessário antes da media query */
 }
 
-header h1 {
-    margin-top: 0;
-    margin-bottom: 0;
-    line-height: normal;
+.site-logo {
+    display: flex;
+    align-items: center;
+    /* order: 1; Será definido em media queries */
+}
+
+.site-logo img { /* Adicione esta regra se você usar uma imagem no .site-logo */
+    height: 50px; 
+    width: auto;
+    margin-right: 15px;
+}
+
+header h1.site-title {
+    color: #ffffff; /* Garante a cor do título */
+    margin: 0 auto; /* Tenta centralizar se não houver outros flex items empurrando */
+    font-size: 1.8em; 
+    text-align: center;
+    flex-grow: 1; /* Permite que o título ocupe espaço */
+    /* Para centralização absoluta (se preferir este método em desktop):
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto; // Para não ocupar toda a largura e respeitar o transform
+    */
 }
 
 nav {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+    /* margin-left: auto; Removido para permitir melhor centralização em flex-wrap */
+    /* order: 3; Será definido em media queries */
 }
 
 nav ul {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
 }
 
 nav li {
-    margin-left: 15px;
+    margin-left: 15px; /* Espaçamento entre itens do menu */
 }
 
 nav a {
-    color: white;
+    color: #ffffff;
     text-decoration: none;
     padding: 5px 10px;
+    display: block;
     border-radius: 4px;
     transition: background-color 0.2s ease;
 }
@@ -311,117 +334,196 @@ footer {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Estilos para o botão de upvote */
+/* Estilos para o botão de upvote - revisados para condizer com o design */
+.upvote-btn,
 .upvote-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 8px 15px;
-    background-color: #333;
-    color: #fff;
-    border: 1px solid #555;
+    background-color: #007bff; /* Mesma cor do botão "Leia mais" */
+    color: #ffffff; /* Texto branco para melhor visibilidade */
+    border: none; /* Remove a borda para ficar igual ao "Leia mais" */
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+    transition: background-color 0.2s ease, transform 0.1s ease;
     gap: 8px;
     font-weight: bold;
     margin-right: 10px;
+    font-size: 0.9em;
 }
 
+.upvote-btn:hover,
 .upvote-button:hover {
-    background-color: #444;
+    background-color: #0056b3; /* Mesmo hover do botão "Leia mais" */
+    transform: translateY(-2px); /* Efeito de elevação ao passar o mouse */
 }
 
+.upvote-btn.upvoted,
 .upvote-button.upvoted {
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: #0056b3; /* Uma variação mais escura quando upvotado */
 }
 
-.upvote-button.upvoted .upvote-icon {
-    transform: scale(1.1);
-}
-
+.upvote-btn i,
+.upvote-button i,
 .upvote-icon {
     display: inline-block;
-    width: 16px;
-    height: 16px;
     transition: transform 0.2s ease;
+    color: #ffffff; /* Garante que o ícone seja branco */
+}
+
+.upvote-btn:hover i,
+.upvote-button:hover i,
+.upvote-btn.upvoted i,
+.upvote-button.upvoted i {
+    transform: translateY(-2px); /* Efeito no ícone ao passar o mouse ou quando upvotado */
 }
 
 .upvote-count {
     display: inline-block;
     min-width: 20px;
     text-align: center;
+    color: #ffffff; /* Garante que o contador seja branco */
+}
+
+/* Alinhamento dos botões de ação nos cards de post */
+.post-metrics {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px; /* Espaço adequado antes do botão "Leia mais" */
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
     header {
+        flex-direction: column;
+        align-items: center;
         padding: 15px;
     }
-    
-    nav {
-        position: relative;
-        top: 0;
-        right: 0;
-        margin-top: 15px;
-        text-align: center;
+
+    .site-logo {
+        order: 1;
+        margin-right: 0;
+        margin-bottom: 10px;
     }
-    
+    .site-logo img {
+        height: 45px;
+    }
+
+    header h1.site-title {
+        order: 2;
+        position: static; /* Remove posicionamento absoluto */
+        transform: none;
+        font-size: 1.6em;
+        margin-top: 0;
+        margin-bottom: 15px;
+        width: 100%; /* Garante que ocupe a largura para text-align:center funcionar */
+    }
+
+    nav {
+        order: 3;
+        margin-left: 0;
+        width: 100%;
+    }
+
     nav ul {
         flex-direction: column;
         align-items: center;
-    }
-    
-    nav li {
-        margin: 5px 0;
-        margin-left: 0;
-    }
-    
-    .container, 
-    .full-post,
-    .post-form-container,
-    #posts-container,
-    .form-container {
-        margin: 15px;
-        padding: 15px;
-        max-width: none;
-    }
-
-    .action-button,
-    .read-more-link,
-    .back-link-post,
-    .submit-button,
-    input[type="submit"] {
         width: 100%;
-        margin-bottom: 10px;
     }
 
-    .post-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+    nav li {
+        margin: 8px 0;
+        width: 80%; /* Ou 100% se preferir botões de largura total */
+        text-align: center;
     }
-    
-    .upvote-button {
-        margin-right: 0;
-        margin-bottom: 10px;
+
+    nav a {
+        padding: 12px; /* Área de toque maior */
+        background-color: #3f3f3f; /* Fundo para destacar os links do menu */
+    }
+    nav a:hover {
+        background-color: #555;
+    }
+
+    .container, #posts-container {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .post-summary {
+        padding: 15px;
+    }
+    .post-summary h3 {
+        font-size: 1.4em;
     }
 }
 
 @media (max-width: 480px) {
-    header h1 {
-        font-size: 1.5em;
+    header {
+        padding: 10px;
     }
-    
+    .site-logo img {
+        height: 40px;
+    }
+    header h1.site-title {
+        font-size: 1.4em;
+        margin-bottom: 10px;
+    }
+
+    nav li {
+        width: 90%; /* Ajuste a largura dos itens do menu se necessário */
+    }
+    nav a {
+        font-size: 0.95em;
+        padding: 10px;
+    }
+
+    #posts-container {
+        margin-left: 5px;
+        margin-right: 5px;
+        padding: 10px;
+    }
+
+    .post-summary {
+        padding: 10px;
+    }
     .post-summary h3 {
         font-size: 1.2em;
+        margin-bottom: 8px;
+    }
+    .post-meta, .post-summary p, .post-stats {
+        font-size: 0.85em;
+        line-height: 1.5;
+    }
+
+    .action-button,
+    .read-more-link,
+    .metric-button,
+    .upvote-btn {
+        padding: 9px 14px;
+        font-size: 0.9em;
     }
     
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    textarea {
-        padding: 8px;
+    .post-metrics { /* Se os botões de upvote e comentários estiverem em um container .post-metrics */
+        display: flex;
+        flex-wrap: wrap; /* Permite que os botões quebrem linha */
+        gap: 8px; /* Espaço entre os botões */
+        margin-top: 10px;
     }
+    .post-metrics .metric-button, .post-metrics .upvote-btn {
+        flex-grow: 1; /* Faz os botões dividirem o espaço */
+        text-align: center;
+    }
+
+
+    body {
+        font-size: 14px;
+    }
+}
+
+/* Garante branco e aumenta a prioridade */
+.post-summary .action-button {
+    color: #ffffff !important; /* Garante branco e aumenta a prioridade */
 }

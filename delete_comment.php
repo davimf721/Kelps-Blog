@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'includes/db_connect.php';
 
 if (!isset($_SESSION['user_id'])) {

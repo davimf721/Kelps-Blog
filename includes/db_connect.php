@@ -22,4 +22,3 @@ try {
 } catch (Exception $e) {
     die("Erro de conexão: " . $e->getMessage());
 }
-?>

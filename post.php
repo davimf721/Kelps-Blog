@@ -1,7 +1,10 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'includes/db_connect.php';
 require_once 'libs/Parsedown.php'; // Incluir o Parsedown
+require_once 'includes/auth.php';
 
 // Verificar se o ID do post foi fornecido
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {

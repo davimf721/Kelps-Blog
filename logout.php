@@ -1,23 +1,38 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once 'includes/db_connect.php'; // Este arquivo deve definir $dbconn
 
-// Limpar todas as variáveis de sessão
-$_SESSION = array();
+// Limpar o token no banco de dados
+if (isset($_SESSION['user_id']) && isset($dbconn)) {
+    
+    $sql = "UPDATE users SET remember_token = NULL, token_expires = NULL WHERE id = $1";
+    $result = pg_query_params($dbconn, $sql, array($_SESSION['user_id']));
 
-// Destruir a sessão
-if (ini_get("session.use_cookies")) {
-    $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-    );
+    if (!$result) {
+        // Opcional: Adicionar log de erro se a consulta falhar
+        error_log("Erro ao limpar remember_token no logout para user_id: " . $_SESSION['user_id'] . " - " . pg_last_error($dbconn));
+    }
+} elseif (isset($_SESSION['user_id']) && !isset($dbconn)) {
+    // Opcional: Adicionar log de erro se $dbconn não estiver definido
+    error_log("Erro no logout: \$dbconn não está definido. user_id: " . $_SESSION['user_id']);
 }
 
+// Destruir o cookie
+setcookie('remember_token', '', [
+    'expires' => time() - 3600,
+    'path' => '/',
+    'secure' => true, // Requer HTTPS
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
+// Destruir a sessão
+session_unset();
 session_destroy();
 
-session_start(); // Reiniciar a sessão apenas para a mensagem
-$_SESSION['logout_message'] = "Você foi desconectado com sucesso.";
-
+// Redirecionar para a página inicial
 header("Location: index.php");
-exit();
+exit;
 ?>
