@@ -516,7 +516,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
         if (window.location.search.includes('comment_added=true')) {
             document.querySelector('.comments-section').scrollIntoView({ behavior: 'smooth' });
         }
+        
+        function fetchComments() {
+            fetch('fetch_comments.php?post_id=<?php echo $post_id; ?>')
+                .then(response => response.json())
+                .then(comments => {
+                    const commentsList = document.querySelector('.comments-list');
+                    commentsList.innerHTML = '';
+                    if (comments.length === 0) {
+                        commentsList.innerHTML = '<div class="no-comments"><p><i class="far fa-comment-dots"></i> Nenhum comentário ainda. Seja o primeiro a comentar!</p></div>';
+                    } else {
+                        comments.forEach(comment => {
+                            commentsList.innerHTML += `
+                                <div class="comment">
+                                    <div class="comment-header">
+                                        <span class="comment-author">${comment.username}</span>
+                                        <span class="comment-date">${new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+                                    </div>
+                                    <div class="comment-content">${comment.content.replace(/\n/g, '<br>')}</div>
+                                </div>
+                            `;
+                        });
+                    }
+                });
+        }
+        setInterval(fetchComments, 10000); // Atualiza a cada 10s
     });
     </script>
+    <script>
+function fetchUpvotes() {
+    fetch('fetch_upvotes.php?post_id=<?php echo $post_id; ?>')
+        .then(response => response.json())
+        .then(data => {
+            document.querySelector('.upvote-count').textContent = data.upvotes;
+        });
+}
+setInterval(fetchUpvotes, 5000); // Atualiza a cada 5s
+</script>
 </body>
 </html>
