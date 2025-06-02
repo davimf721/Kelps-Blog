@@ -41,20 +41,11 @@ header h1.site-title {
     font-size: 1.8em; 
     text-align: center;
     flex-grow: 1; /* Permite que o título ocupe espaço */
-<<<<<<< HEAD
     
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     width: auto;
-=======
-    /* Para centralização absoluta (se preferir este método em desktop):
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto; // Para não ocupar toda a largura e respeitar o transform
-    */
->>>>>>> 9b402f7aae0fc8d19660a3ad155a0fecfd3c5fe9
 }
 
 nav {
