@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db_connect.php';
+require_once 'includes/auth.php';
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Você precisa estar logado.']);
@@ -24,22 +25,25 @@ $result = pg_query($dbconn, $query);
 
 if ($result) {
     $comment = pg_fetch_assoc($result);
-    // Buscar nome do usuário
-    $user_query = pg_query($dbconn, "SELECT username FROM users WHERE id = $user_id");
+    // Buscar nome do usuário e status de admin
+    $user_query = pg_query($dbconn, "SELECT username, is_admin FROM users WHERE id = $user_id");
     $user = pg_fetch_assoc($user_query);
     
+    header('Content-Type: application/json');
     echo json_encode([
         'success' => true, 
         'comment' => [
             'id' => $comment['id'],
-            'content' => $_POST['content'],
+            'content' => htmlspecialchars($_POST['content']),
             'created_at' => $comment['created_at'],
-            'username' => $user['username'],
+            'username' => htmlspecialchars($user['username']),
             'user_id' => $user_id,
             'parent_id' => $parent_id == 'NULL' ? null : $parent_id,
+            'is_admin' => $user['is_admin'] == 't',
             'can_delete' => true
         ]
     ]);
 } else {
+    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Erro ao adicionar comentário.']);
 }
