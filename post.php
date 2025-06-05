@@ -214,4 +214,49 @@ include 'includes/header.php';
 
 </div>
 
+<script>
+// Script para upvote na página do post
+document.addEventListener('DOMContentLoaded', function() {
+    const upvoteButton = document.querySelector('.upvote-button');
+    
+    if (upvoteButton && !upvoteButton.disabled) {
+        upvoteButton.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const countElement = this.querySelector('.upvote-count');
+            const isUpvoted = this.classList.contains('upvoted');
+            
+            // Desabilitar temporariamente
+            this.disabled = true;
+            
+            fetch('upvote_post.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    post_id: postId,
+                    action: isUpvoted ? 'remove' : 'add'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    countElement.textContent = data.upvotes_count;
+                    this.classList.toggle('upvoted');
+                } else {
+                    alert(data.message || 'Erro ao processar upvote');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao processar upvote');
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
+        });
+    }
+});
+</script>
+
 <?php include 'includes/footer.php'; ?>

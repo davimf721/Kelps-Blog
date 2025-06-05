@@ -399,341 +399,88 @@ footer {
     color: #ffffff; /* Garante que o contador seja branco */
 }
 
-/* Alinhamento dos botões de ação nos cards de post */
-.post-metrics {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px; /* Espaço adequado antes do botão "Leia mais" */
-}
-
-/* Estilos para notificações */
-#notifications-link {
-    position: relative;
-}
-
-.notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -8px;
-    background-color: #dc3545;
-    color: white;
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 50%;
-}
-
-.profile-stats {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
-    font-size: 14px;
-}
-
-.stat {
-    padding: 5px 10px;
-    background-color: #444;
-    border-radius: 4px;
-}
-
-.stat-value {
-    font-weight: bold;
-    margin-right: 4px;
-}
-
-.follow-btn {
-    background-color: #28a745;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 4px;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.3s;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.follow-btn:hover {
-    background-color: #218838;
-}
-
-.follow-btn.unfollow {
-    background-color: #dc3545;
-}
-
-.follow-btn.unfollow:hover {
-    background-color: #c82333;
-}
-
-/* Novo estilo para links de autor */
-.author-link {
-    color: #00c6ff; /* Azul mais vibrante */
-    font-weight: 600; /* Mais negrito que o normal */
-    text-decoration: none;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    background-color: rgba(0, 198, 255, 0.08); /* Fundo sutil */
-}
-
-.author-link:hover {
-    color: #ffffff;
-    background-color: rgba(0, 198, 255, 0.25);
-    transform: translateY(-1px);
-    text-decoration: none;
-}
-
-/* Melhoria para links gerais */
-a {
-    color: #00c6ff; /* Azul mais vibrante */
-    text-decoration: none;
-    transition: color 0.2s ease, text-decoration 0.2s ease;
-}
-
-a:hover {
-    color: #5cddff; /* Azul mais claro no hover */
-    text-decoration: underline;
-}
-
-/* Estilo para título dos posts */
-.post-summary h3 a {
-    color: #5cddff; /* Azul mais brilhante */
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.post-summary h3 a:hover {
-    color: #ffffff; /* Branco no hover */
-    text-shadow: 0 0 8px rgba(92, 221, 255, 0.5); /* Brilho suave no hover */
-    text-decoration: none;
-}
-
-/* Post meta com design mais moderno */
-.post-meta {
-    font-size: 0.9em;
-    color: #a0a0a0; /* Cinza mais claro */
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-/* Admin badge mais moderno */
-.admin-badge {
+/* Botão de upvote - Estilos atualizados */
+.upvote-button {
     display: inline-flex;
     align-items: center;
-    background-color: rgba(255, 152, 0, 0.2);
-    color: #ff9800;
-    font-size: 0.85em;
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin-left: 6px;
-    transition: all 0.2s ease;
-}
-
-.admin-badge:hover {
-    background-color: rgba(255, 152, 0, 0.3);
-}
-
-.admin-badge i {
-    margin-right: 4px;
-}
-
-/* Melhorias para a página de post */
-.post-container {
-    max-width: 850px;
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-}
-
-.full-post {
-    background-color: #3a3a3a;
-    border-radius: 8px;
-    padding: 30px;
-    margin-bottom: 25px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-}
-
-.full-post h1 {
-    color: #ffffff;
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 2.2em;
-    font-weight: 700;
-    line-height: 1.3;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.post-content {
-    color: #e6e6e6;
-    line-height: 1.7;
-    font-size: 1.05em;
-}
-
-.post-content p {
-    margin-bottom: 1.5em;
-}
-
-/* Melhorias para a página de post - Seção de Comentários */
-.comments-area {
-    background-color: #3a3a3a; /* Mantém o fundo escuro */
-    border-radius: 8px;
-    padding: 35px 40px; /* Aumentado o padding geral da seção */
-    margin-top: 30px; /* Adiciona mais espaço acima da seção de comentários */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); /* Sombra um pouco mais pronunciada */
-}
-
-.comments-area h2 {
-    font-size: 1.8em; /* Título um pouco maior */
-    margin-top: 0;
-    margin-bottom: 30px; /* Mais espaço abaixo do título */
-    padding-bottom: 20px; /* Mais espaço no padding do sublinhado */
-    border-bottom: 1px solid #525252; /* Linha divisória um pouco mais clara */
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.comment-form-wrapper {
-    background-color: #444444; /* Fundo ligeiramente diferente para o formulário */
-    padding: 25px 30px; /* Padding interno para o wrapper do formulário */
-    border-radius: 6px;
-    margin-bottom: 35px; /* Mais espaço abaixo do formulário, antes da lista */
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-}
-
-.comment-form-wrapper h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: #f0f0f0;
-    font-size: 1.3em;
-    font-weight: 500;
-}
-
-.new-comment-form textarea {
-    background-color: #333; /* Fundo mais escuro para textarea */
-    border: 1px solid #555;
-    padding: 15px; /* Mais padding interno na textarea */
-    color: #e0e0e0;
+    gap: 6px;
+    background: linear-gradient(135deg, #4a4a4a, #555555);
+    border: 1px solid #666;
+    color: #cccccc;
+    padding: 8px 12px;
     border-radius: 5px;
-    min-height: 120px; /* Altura mínima */
-    margin-bottom: 15px; /* Espaço abaixo da textarea */
-    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9em;
+    margin-right: 15px;
 }
 
-.new-comment-form textarea:focus {
-    border-color: #00c6ff;
-    background-color: #383838;
-    box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.25);
+.upvote-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #555555, #666666);
+    border-color: #777;
+    transform: translateY(-1px);
 }
 
-.new-comment-form .submit-button {
-    padding: 12px 25px; /* Botão de enviar um pouco maior */
-    font-size: 1em;
+.upvote-button.upvoted {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+    color: white;
 }
 
-.login-prompt-comment {
-    background-color: #444444;
-    padding: 20px 25px;
-    border-radius: 6px;
-    margin-bottom: 35px;
+.upvote-button.upvoted:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+}
+
+.upvote-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #333;
+}
+
+.upvote-icon {
+    font-size: 1.1em;
+}
+
+.upvote-count {
+    font-weight: bold;
+    min-width: 20px;
     text-align: center;
-    color: #c0c0c0;
 }
 
-.login-prompt-comment a {
-    color: #00c6ff;
-    font-weight: 600;
-}
-
-.comments-list-wrapper {
-    margin-top: 20px; /* Espaço acima da lista de comentários, se o formulário estiver acima */
-}
-
-.comment-item {
-    background-color: #404040; /* Fundo do item de comentário */
-    border: 1px solid #4d4d4d; /* Borda sutil */
-    border-radius: 6px;
-    padding: 20px 25px; /* Padding interno aumentado */
-    margin-bottom: 20px; /* Mais espaço entre os comentários */
-    position: relative;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-}
-
-.comment-author-info {
+/* Ajustes para post-stats */
+.post-stats {
     display: flex;
     align-items: center;
-    margin-bottom: 12px; /* Mais espaço abaixo das informações do autor */
+    margin: 15px 0;
     flex-wrap: wrap;
+    gap: 10px;
 }
 
-.comment-author-info .author-name-link {
-    font-weight: 600;
-    color: #00c6ff; /* Cor do link do autor */
-    font-size: 1.05em;
+.comment-count {
+    color: #888;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.comment-author-info .admin-badge-inline {
-    margin-left: 8px;
-    font-size: 0.8em;
+/* Ajustes específicos para a página de post */
+.post-footer-feedback {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 0;
+    border-top: 1px solid #525252;
+    margin-top: 25px;
+    gap: 20px;
 }
 
-.comment-timestamp {
-    font-size: 0.85em;
-    color: #a0a0a0; /* Cor da data/hora mais suave */
-    margin-left: 8px;
-}
-
-.comment-text {
-    color: #e0e0e0;
-    line-height: 1.65; /* Altura da linha um pouco maior para legibilidade */
-    font-size: 0.95em;
-}
-
-.comment-text p:last-child {
-    margin-bottom: 0;
-}
-
-.comment-actions {
-    margin-top: 15px; /* Espaço acima das ações do comentário */
-    padding-top: 10px;
-    border-top: 1px dashed #555; /* Linha divisória para ações */
-    text-align: right;
-}
-
-.comment-actions .action-link {
-    font-size: 0.85em;
-    color: #00c6ff;
-    margin-left: 15px;
-    text-decoration: none;
-}
-.comment-actions .action-link:hover {
-    text-decoration: underline;
-    color: #5cddff;
-}
-
-
-.no-comments-message {
-    background-color: #404040;
-    padding: 25px; /* Mais padding */
-    border-radius: 6px;
-    color: #b0b0b0;
-    text-align: center;
-    font-style: italic;
-    font-size: 1.05em; /* Texto um pouco maior */
-}
-
-.page-navigation-links {
-    margin-top: 40px; /* Mais espaço acima do botão de voltar */
-    text-align: center; /* Centralizar o botão */
-}
-
-.back-to-home-link { /* Estilo específico se necessário, ou herda de .read-more-link */
-    padding: 12px 25px;
-    font-size: 1em;
+.comments-count-display {
+    color: #888;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 /* Responsividade */

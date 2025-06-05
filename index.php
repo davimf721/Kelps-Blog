@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>' 
                     : '';
                 
+                // Verificar se o usuário está logado (será passado do PHP)
+                const isLoggedIn = <?php echo is_logged_in() ? 'true' : 'false'; ?>;
+                
                 container.innerHTML += `
                     <article class="post-summary">
                         <h3><a href="post.php?id=${post.id}">${post.title}</a></h3>
@@ -63,7 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         </p>
                         <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
                         <div class="post-stats">
-                            <span class="upvote-count"><i class="fas fa-arrow-up"></i> ${post.upvotes_count || 0}</span>
+                            <button class="upvote-button ${post.user_has_upvoted ? 'upvoted' : ''}" 
+                                    data-post-id="${post.id}"
+                                    ${!isLoggedIn ? 'disabled title="Faça login para dar upvote"' : ''}>
+                                <i class="fas fa-arrow-up upvote-icon"></i>
+                                <span class="upvote-count">${post.upvotes_count || 0}</span>
+                            </button>
                             <span class="comment-count"><i class="far fa-comment"></i> ${post.comments_count || 0} comentários</span>
                         </div>
                         <a href="post.php?id=${post.id}" class="read-more-link">
@@ -72,11 +80,59 @@ document.addEventListener('DOMContentLoaded', function() {
                     </article>
                 `;
             });
+            
+            // Adicionar event listeners para os botões de upvote
+            setupUpvoteButtons();
         })
         .catch(error => {
-            console.error('Erro:', error);
-            const container = document.querySelector('.posts-container');
-            container.innerHTML = '<div class="error-message">Erro ao carregar posts. Por favor, tente novamente mais tarde.</div>';
+            console.error('Erro ao carregar posts:', error);
+            container.innerHTML = '<div class="error-message">Erro ao carregar posts. Tente novamente mais tarde.</div>';
+        });
+    }
+    
+    // Função para configurar os botões de upvote
+    function setupUpvoteButtons() {
+        document.querySelectorAll('.upvote-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.disabled) return;
+                
+                const postId = this.dataset.postId;
+                const countElement = this.querySelector('.upvote-count');
+                const currentCount = parseInt(countElement.textContent);
+                const isUpvoted = this.classList.contains('upvoted');
+                
+                // Desabilitar temporariamente para evitar cliques múltiplos
+                this.disabled = true;
+                
+                fetch('upvote_post.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        post_id: postId,
+                        action: isUpvoted ? 'remove' : 'add'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Atualizar a interface
+                        countElement.textContent = data.upvotes_count;
+                        this.classList.toggle('upvoted');
+                    } else {
+                        alert(data.message || 'Erro ao processar upvote');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao processar upvote');
+                })
+                .finally(() => {
+                    // Reabilitar o botão
+                    this.disabled = false;
+                });
+            });
         });
     }
     
