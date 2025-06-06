@@ -45,86 +45,148 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title ?? 'Kelps Blog'; ?></title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="icon" href="/images/file.jpg" type="image/jpg">
-    <style>
-        /* Estilo para o badge de notificações */
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -8px;
-            background-color: #dc3545;
-            color: white;
-            font-size: 10px;
-            padding: 1px 5px;
-            border-radius: 50%;
-        }
-        
-        #notifications-link {
-            position: relative;
-        }
-        
-        .admin-link {
-            background-color: #ff9800;
-            color: white !important;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .admin-link:hover {
-            background-color: #e68a00;
-        }
-    </style>
+    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Kelps Blog'; ?></title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive-fixes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/file.jpg">
 </head>
-<body>
+<body class="<?php echo isset($current_page) ? 'page-' . $current_page : ''; ?>">
     <header>
         <div class="site-logo">
-            <!-- Logo aqui se tiver -->
+            <img src="images/file.jpg" alt="Kelps Blog" onerror="this.style.display='none'">
         </div>
+        
         <h1 class="site-title">Kelps Blog</h1>
-        <nav>
+        
+        <!-- Botão do menu hamburger para mobile -->
+        <button class="mobile-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+            <i class="fas fa-bars hamburger"></i>
+        </button>
+        
+        <nav role="navigation" aria-label="Menu principal">
             <ul>
-                <li><a href="/index.php" <?php echo $current_page == 'home' ? 'class="active"' : ''; ?>>Home</a></li>
+                <li><a href="index.php" <?php echo (isset($current_page) && $current_page === 'home') ? 'class="active"' : ''; ?>>
+                    <i class="fas fa-home"></i> Home
+                </a></li>
+                
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <li><a href="/create_post.php" <?php echo $current_page == 'create_post' ? 'class="active"' : ''; ?>>Criar Post</a></li>
-                    <li>
-                        <a href="/notifications.php" id="notifications-link" <?php echo $current_page == 'notifications' ? 'class="active"' : ''; ?>>
-                            <i class="fas fa-bell"></i>
-                            <?php if (isset($_SESSION['unread_notifications']) && $_SESSION['unread_notifications'] > 0): ?>
-                                <span class="notification-badge"><?php echo $_SESSION['unread_notifications']; ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </li>
-                    <?php if ($is_admin): ?>
-                        <li><a href="/admin/index.php" class="admin-link <?php echo strpos($current_page, 'admin') !== false ? 'active' : ''; ?>">
+                    <li><a href="create_post.php" <?php echo (isset($current_page) && $current_page === 'create') ? 'class="active"' : ''; ?>>
+                        <i class="fas fa-plus"></i> Criar Post
+                    </a></li>
+                    
+                    <!-- Link para Notificações -->
+                    <li><a href="notifications.php" <?php echo (isset($current_page) && $current_page === 'notifications') ? 'class="active"' : ''; ?> class="notifications-link">
+                        <i class="fas fa-bell"></i> 
+                        <span class="notifications-text">Notificações</span>
+                        <?php if (isset($_SESSION['unread_notifications']) && $_SESSION['unread_notifications'] > 0): ?>
+                            <span class="notification-badge"><?php echo $_SESSION['unread_notifications']; ?></span>
+                        <?php endif; ?>
+                    </a></li>
+                    
+                    <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+                        <li><a href="admin/" class="admin-link">
                             <i class="fas fa-shield-alt"></i> Admin
                         </a></li>
                     <?php endif; ?>
-                    <li><a href="/profile.php" <?php echo $current_page == 'profile' ? 'class="active"' : ''; ?>>Perfil (<?php echo htmlspecialchars($_SESSION['username']); ?>)</a></li>
-                    <li><a href="/logout.php">Logout</a></li>
+                    
+                    <li><a href="profile.php?user_id=<?php echo $_SESSION['user_id']; ?>" <?php echo (isset($current_page) && $current_page === 'profile') ? 'class="active"' : ''; ?>>
+                        <i class="fas fa-user"></i> 
+                        <span class="username-text">Perfil (<?php echo htmlspecialchars($_SESSION['username']); ?>)</span>
+                    </a></li>
+                    
+                    <li><a href="logout.php" class="logout-link">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a></li>
                 <?php else: ?>
-                    <li><a href="/register.php" <?php echo $current_page == 'register' ? 'class="active"' : ''; ?>>Register</a></li>
-                    <li><a href="/login.php" <?php echo $current_page == 'login' ? 'class="active"' : ''; ?>>Login</a></li>
+                    <li><a href="login.php" <?php echo (isset($current_page) && $current_page === 'login') ? 'class="active"' : ''; ?>>
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a></li>
+                    <li><a href="register.php" <?php echo (isset($current_page) && $current_page === 'register') ? 'class="active"' : ''; ?>>
+                        <i class="fas fa-user-plus"></i> Registrar
+                    </a></li>
                 <?php endif; ?>
             </ul>
         </nav>
     </header>
 
     <main>
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert error">
-                <p><?php echo $_SESSION['error']; ?></p>
-                <?php unset($_SESSION['error']); ?>
+        <!-- Mensagens de sucesso/erro -->
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="alert success">
+                <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
             </div>
         <?php endif; ?>
         
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert success">
-                <p><?php echo $_SESSION['success']; ?></p>
-                <?php unset($_SESSION['success']); ?>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="alert error">
+                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
             </div>
         <?php endif; ?>
+
+    <script>
+        // Script do menu hamburger
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.querySelector('.mobile-menu-toggle');
+            const body = document.body;
+            const nav = document.querySelector('nav');
+            
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    const isOpen = body.classList.contains('mobile-nav-open');
+                    
+                    if (isOpen) {
+                        // Fechar menu
+                        body.classList.remove('mobile-nav-open');
+                        menuToggle.setAttribute('aria-expanded', 'false');
+                        menuToggle.setAttribute('aria-label', 'Abrir menu');
+                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
+                        body.style.overflow = '';
+                    } else {
+                        // Abrir menu
+                        body.classList.add('mobile-nav-open');
+                        menuToggle.setAttribute('aria-expanded', 'true');
+                        menuToggle.setAttribute('aria-label', 'Fechar menu');
+                        menuToggle.querySelector('.hamburger').className = 'fas fa-times hamburger';
+                        body.style.overflow = 'hidden';
+                    }
+                });
+                
+                // Fechar menu ao clicar nos links (mobile)
+                if (nav) {
+                    nav.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'A' && window.innerWidth <= 768) {
+                            body.classList.remove('mobile-nav-open');
+                            menuToggle.setAttribute('aria-expanded', 'false');
+                            menuToggle.setAttribute('aria-label', 'Abrir menu');
+                            menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
+                            body.style.overflow = '';
+                        }
+                    });
+                }
+                
+                // Fechar menu ao redimensionar janela
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth > 768 && body.classList.contains('mobile-nav-open')) {
+                        body.classList.remove('mobile-nav-open');
+                        menuToggle.setAttribute('aria-expanded', 'false');
+                        menuToggle.setAttribute('aria-label', 'Abrir menu');
+                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
+                        body.style.overflow = '';
+                    }
+                });
+                
+                // Fechar menu com tecla ESC
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && body.classList.contains('mobile-nav-open')) {
+                        body.classList.remove('mobile-nav-open');
+                        menuToggle.setAttribute('aria-expanded', 'false');
+                        menuToggle.setAttribute('aria-label', 'Abrir menu');
+                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
+                        body.style.overflow = '';
+                        menuToggle.focus();
+                    }
+                });
+            }
+        });
+    </script>

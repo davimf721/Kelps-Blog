@@ -15,16 +15,49 @@ if (!is_logged_in() || !is_admin()) {
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $post_id = (int)$_GET['id'];
     
-    // Primeiro, excluir comentários relacionados ao post
+    // Primeiro, excluir upvotes relacionados ao post
+    $delete_upvotes = pg_query($dbconn, "DELETE FROM post_upvotes WHERE post_id = $post_id");
+    
+    // Depois, excluir comentários relacionados ao post
     $delete_comments = pg_query($dbconn, "DELETE FROM comments WHERE post_id = $post_id");
     
-    // Depois, excluir o post
+    // Excluir notificações relacionadas ao post
+    $delete_notifications = pg_query($dbconn, "DELETE FROM notifications WHERE reference_id = $post_id AND type IN ('new_post', 'upvote', 'comment')");
+    
+    // Finalmente, excluir o post
     $delete_post = pg_query($dbconn, "DELETE FROM posts WHERE id = $post_id");
     
     if ($delete_post) {
         $_SESSION['admin_success'] = "Post excluído com sucesso.";
     } else {
-        $_SESSION['admin_error'] = "Erro ao excluir post.";
+        $_SESSION['admin_error'] = "Erro ao excluir post: " . pg_last_error($dbconn);
+    }
+    
+    // Redirecionar para evitar resubmissão
+    header("Location: posts.php");
+    exit();
+}
+
+// Processar via parâmetro delete_post (compatibilidade com os links existentes)
+if (isset($_GET['delete_post']) && is_numeric($_GET['delete_post'])) {
+    $post_id = (int)$_GET['delete_post'];
+    
+    // Primeiro, excluir upvotes relacionados ao post
+    $delete_upvotes = pg_query($dbconn, "DELETE FROM post_upvotes WHERE post_id = $post_id");
+    
+    // Depois, excluir comentários relacionados ao post
+    $delete_comments = pg_query($dbconn, "DELETE FROM comments WHERE post_id = $post_id");
+    
+    // Excluir notificações relacionadas ao post
+    $delete_notifications = pg_query($dbconn, "DELETE FROM notifications WHERE reference_id = $post_id AND type IN ('new_post', 'upvote', 'comment')");
+    
+    // Finalmente, excluir o post
+    $delete_post = pg_query($dbconn, "DELETE FROM posts WHERE id = $post_id");
+    
+    if ($delete_post) {
+        $_SESSION['admin_success'] = "Post excluído com sucesso.";
+    } else {
+        $_SESSION['admin_error'] = "Erro ao excluir post: " . pg_last_error($dbconn);
     }
     
     // Redirecionar para evitar resubmissão
@@ -33,8 +66,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
 }
 
 // Buscar todos os posts
-$posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.username, 
-                                    (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+$posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.username, p.user_id,
+                                    (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+                                    COALESCE(p.upvotes_count, 0) as upvotes_count
                                    FROM posts p
                                    JOIN users u ON p.user_id = u.id
                                    ORDER BY p.created_at DESC");
@@ -48,7 +82,6 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Mesmos estilos da página de usuários */
         .admin-header {
             background-color: #212121;
             color: #fff;
@@ -78,97 +111,101 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
         }
         
         .admin-section h2 {
+            color: #fff;
             margin-top: 0;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .admin-table th, .admin-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        
-        .admin-table th {
-            background-color: #1a1a1a;
-            color: #0e86ca;
-        }
-        
-        .admin-table tr:hover {
-            background-color: #333;
-        }
-        
-        .admin-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .admin-btn {
-            background-color: #0e86ca;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background-color 0.3s;
-            text-decoration: none;
-        }
-        
-        .admin-btn:hover {
-            background-color: #0a6aa8;
-        }
-        
-        .admin-btn.delete {
-            background-color: #ca0e0e;
-        }
-        
-        .admin-btn.delete:hover {
-            background-color: #a80a0a;
-        }
-        
-        .admin-nav {
-            margin-bottom: 20px;
-        }
-        
         .admin-nav ul {
             list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
             display: flex;
             gap: 20px;
-            padding: 0;
-            margin: 0;
-            background-color: #212121;
+            background-color: #333;
             border-radius: 5px;
-            padding: 10px;
+            padding: 10px 20px;
         }
         
         .admin-nav a {
-            color: #0e86ca;
+            color: #fff;
             text-decoration: none;
-            font-weight: bold;
-            padding: 5px 10px;
+            padding: 8px 15px;
             border-radius: 3px;
             transition: background-color 0.3s;
         }
         
         .admin-nav a:hover,
         .admin-nav a.active {
+            background-color: #007bff;
+        }
+        
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
             background-color: #333;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .admin-table th,
+        .admin-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+            color: #fff;
+        }
+        
+        .admin-table th {
+            background-color: #444;
+            font-weight: bold;
+        }
+        
+        .admin-table tr:hover {
+            background-color: #3a3a3a;
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 2px;
+            text-decoration: none;
+            border-radius: 3px;
+            font-size: 0.85em;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-btn {
+            background-color: #007bff;
+            color: #fff;
+        }
+        
+        .admin-btn:hover {
+            background-color: #0056b3;
+            color: #fff;
+        }
+        
+        .admin-btn.delete {
+            background-color: #dc3545;
+        }
+        
+        .admin-btn.delete:hover {
+            background-color: #c82333;
+        }
+        
+        .admin-actions {
+            white-space: nowrap;
         }
         
         .admin-message {
-            padding: 10px 15px;
+            padding: 15px;
+            border-radius: 5px;
             margin-bottom: 20px;
-            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .admin-message.success {
@@ -188,6 +225,16 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        
+        .table-title a {
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .table-title a:hover {
+            color: #007bff;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -220,6 +267,7 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
             
             <?php if (isset($_SESSION['admin_success'])): ?>
                 <div class="admin-message success">
+                    <i class="fas fa-check-circle"></i>
                     <?php echo htmlspecialchars($_SESSION['admin_success']); ?>
                     <?php unset($_SESSION['admin_success']); ?>
                 </div>
@@ -227,6 +275,7 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
             
             <?php if (isset($_SESSION['admin_error'])): ?>
                 <div class="admin-message error">
+                    <i class="fas fa-exclamation-circle"></i>
                     <?php echo htmlspecialchars($_SESSION['admin_error']); ?>
                     <?php unset($_SESSION['admin_error']); ?>
                 </div>
@@ -242,6 +291,7 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
                             <th>Autor</th>
                             <th>Data</th>
                             <th>Comentários</th>
+                            <th>Upvotes</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -250,16 +300,25 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
                             <?php while ($post = pg_fetch_assoc($posts_result)): ?>
                                 <tr>
                                     <td><?php echo $post['id']; ?></td>
-                                    <td class="table-title"><?php echo htmlspecialchars($post['title']); ?></td>
-                                    <td><?php echo htmlspecialchars($post['username']); ?></td>
+                                    <td class="table-title">
+                                        <a href="../post.php?id=<?php echo $post['id']; ?>" target="_blank">
+                                            <?php echo htmlspecialchars($post['title']); ?>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="../profile.php?user_id=<?php echo $post['user_id']; ?>" target="_blank">
+                                            <?php echo htmlspecialchars($post['username']); ?>
+                                        </a>
+                                    </td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($post['created_at'])); ?></td>
-                                    <td><?php echo $post['comments_count']; ?></td>
+                                    <td class="text-center"><?php echo $post['comments_count']; ?></td>
+                                    <td class="text-center"><?php echo $post['upvotes_count']; ?></td>
                                     <td class="admin-actions">
-                                        <a href="../post.php?id=<?php echo $post['id']; ?>" class="admin-btn">Ver</a>
+                                        <a href="../post.php?id=<?php echo $post['id']; ?>" class="admin-btn" target="_blank">Ver</a>
                                         <a href="../edit_post.php?id=<?php echo $post['id']; ?>" class="admin-btn">Editar</a>
-                                        <a href="posts.php?action=delete&id=<?php echo $post['id']; ?>" 
+                                        <a href="posts.php?delete_post=<?php echo $post['id']; ?>" 
                                            class="admin-btn delete" 
-                                           onclick="return confirm('Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.')">
+                                           onclick="return confirm('Tem certeza que deseja excluir este post? Esta ação irá excluir também todos os comentários relacionados e é irreversível.');">
                                             Excluir
                                         </a>
                                     </td>
@@ -267,7 +326,7 @@ $posts_result = pg_query($dbconn, "SELECT p.id, p.title, p.created_at, u.usernam
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6">Nenhum post encontrado.</td>
+                                <td colspan="7">Nenhum post encontrado.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

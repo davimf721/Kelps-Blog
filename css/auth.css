@@ -1,217 +1,305 @@
-body.auth-page { /* Adicione class="auth-page" ao body em login.php e register.php */
-    background-color: #2B2B2B;
-    font-family: 'Arial', sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centraliza o header e main */
-    min-height: 100vh;
+/* Reset e configurações básicas */
+* {
     margin: 0;
-    color: #333; /* Cor de texto padrão para o card */
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Estilo para o header das páginas de autenticação */
+body.auth-page {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    color: #333;
+}
+
+/* Header das páginas de autenticação */
 body.auth-page > header {
     width: 100%;
-    padding: 25px 20px;
-    background-color: #2B2B2B;
-    color: white;
-    box-sizing: border-box;
+    padding: 30px 20px;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.auth-page > header h1 {
     margin: 0;
-    font-size: 2.2em;
+    font-size: 2.2rem;
     font-weight: 600;
-    text-align: center; /* Certifique-se que esta linha está presente e correta */
+    text-align: center;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
 }
 
+body.auth-page > header h1 i {
+    color: #0e86ca;
+    font-size: 2rem;
+}
+
+/* Main container */
 main.auth-main {
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Centraliza o card verticalmente se houver espaço */
+    justify-content: center;
     align-items: center;
-    flex-grow: 1; /* Permite que o main ocupe o espaço restante */
+    flex-grow: 1;
     width: 100%;
-    padding: 20px; /* Padding geral para o container principal */
-    box-sizing: border-box;
+    padding: 40px 20px;
 }
 
+/* Card de autenticação */
 .auth-section {
-    background-color: #f8f9fa;
-    padding: 35px 45px; /* Padding interno do card */
-    border-radius: 10px; /* Bordas um pouco mais arredondadas */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Sombra mais suave e profunda */
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 40px 45px;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     width: 100%;
-    max-width: 480px; /* Largura máxima do card */
+    max-width: 480px;
     text-align: center;
-    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Título dentro do card (se houver, geralmente o h1 está no header da página) */
-.auth-section h2 { /* Se você usar um h2 dentro do card */
-    color: #343a40;
-    margin-top: 0; /* Remove margem superior se for o primeiro elemento */
+/* Títulos dentro do card */
+.auth-section h2 {
+    color: #2c3e50;
     margin-bottom: 30px;
-    font-size: 1.8em;
+    font-size: 1.8rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
+/* Labels */
 .auth-section label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 8px;
     font-weight: 600;
     color: #495057;
-    font-size: 0.95em;
-    text-align: left; /* Alinha labels à esquerda */
+    font-size: 0.95rem;
+    text-align: left;
 }
 
+.auth-section label i {
+    color: #0e86ca;
+    width: 16px;
+    text-align: center;
+}
+
+/* Inputs */
 .auth-section input[type="text"],
 .auth-section input[type="email"],
 .auth-section input[type="password"] {
     width: 100%;
-    padding: 14px 16px; /* Padding interno dos inputs */
+    padding: 15px 18px;
     margin-bottom: 20px;
-    border: 1px solid #ced4da;
-    border-radius: 6px; /* Bordas dos inputs mais arredondadas */
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
     background-color: #fff;
     color: #495057;
-    font-size: 1em;
-    box-sizing: border-box;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
 }
 
 .auth-section input[type="text"]:focus,
 .auth-section input[type="email"]:focus,
 .auth-section input[type="password"]:focus {
-    border-color: #007bff;
+    border-color: #0e86ca;
     outline: none;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(14, 134, 202, 0.25);
+    transform: translateY(-1px);
 }
 
+.auth-section input[type="text"]:invalid,
+.auth-section input[type="email"]:invalid,
+.auth-section input[type="password"]:invalid {
+    border-color: #dc3545;
+}
+
+.auth-section input[type="text"]:valid,
+.auth-section input[type="email"]:valid,
+.auth-section input[type="password"]:valid {
+    border-color: #28a745;
+}
+
+/* Grupo de checkbox */
 .auth-section .form-group.checkbox-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-align: left;
     margin-bottom: 25px;
-    margin-top: -10px; /* Aproxima um pouco do campo de senha */
+    padding: 10px 0;
 }
 
 .auth-section .form-group.checkbox-group input[type="checkbox"] {
     width: auto;
-    margin-right: 5px;
-    accent-color: #007bff;
-    transform: scale(1.1); /* Torna o checkbox um pouco maior */
+    margin: 0;
+    margin-right: 8px;
+    accent-color: #0e86ca;
+    transform: scale(1.2);
+    cursor: pointer;
 }
 
 .auth-section .form-group.checkbox-group label {
     margin-bottom: 0;
-    font-weight: normal;
+    font-weight: 500;
     color: #495057;
-    font-size: 0.9em;
+    font-size: 0.9rem;
+    cursor: pointer;
 }
 
-.auth-section button[type="submit"] { /* Estilo unificado para o botão principal do formulário */
+/* Botão principal */
+.auth-section button[type="submit"] {
     width: 100%;
-    padding: 14px 20px;
-    background-color: #007bff;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #0e86ca, #1a9ce8);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 1.1em;
+    font-size: 1.1rem;
     font-weight: bold;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-top: 10px;
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(14, 134, 202, 0.3);
 }
 
 .auth-section button[type="submit"]:hover {
-    background-color: #0056b3;
+    background: linear-gradient(135deg, #0a6aa8, #1580c4);
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(14, 134, 202, 0.4);
 }
 
 .auth-section button[type="submit"]:active {
     transform: translateY(0);
 }
 
+/* Links no rodapé do card */
 .auth-section p {
-    margin-top: 25px;
-    font-size: 0.95em;
+    margin: 15px 0;
+    font-size: 0.95rem;
     color: #6c757d;
 }
 
 .auth-section p a {
-    color: #007bff;
+    color: #0e86ca;
     text-decoration: none;
     font-weight: 600;
+    transition: color 0.3s ease;
 }
 
 .auth-section p a:hover {
     text-decoration: underline;
-    color: #0056b3;
+    color: #0a6aa8;
 }
 
+/* Link de voltar */
 .auth-section .back-link {
-    display: inline-block;
-    margin-top: 15px; /* Aumenta um pouco o espaço */
-    padding: 10px 20px;
-    background-color: #004998; /* Cor azul definida anteriormente */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 12px 24px;
+    background: #6c757d;
     color: white;
-    border-radius: 6px;
+    border-radius: 8px;
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
 }
 
 .auth-section .back-link:hover {
-    background-color: #003a7a; /* Tom mais escuro do azul para hover */
+    background: #5a6268;
     text-decoration: none;
+    transform: translateY(-1px);
 }
 
 /* Mensagens de erro e sucesso */
-.auth-section .message { /* Aplicar especificamente dentro do .auth-section */
-    padding: 12px 15px;
-    margin-bottom: 20px; /* Espaço antes do formulário */
-    border-radius: 6px;
+.auth-section .message {
+    padding: 15px 18px;
+    margin-bottom: 25px;
+    border-radius: 8px;
     text-align: left;
-    font-size: 0.95em;
+    font-size: 0.95rem;
     border: 1px solid transparent;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .auth-section .message.error {
-    background-color: #f8d7da;
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
     color: #721c24;
     border-color: #f5c6cb;
 }
-.auth-section .message.error p { color: #721c24; margin: 0; }
+
+.auth-section .message.error p {
+    color: #721c24;
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
 .auth-section .message.success {
-    background-color: #d4edda;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
     color: #155724;
     border-color: #c3e6cb;
 }
-.auth-section .message.success p { color: #155724; margin: 0; }
 
+.auth-section .message.success p {
+    color: #155724;
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Footer */
+body.auth-page > footer {
+    width: 100%;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    text-align: center;
+    color: #ccc;
+    font-size: 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
 
 /* --- Responsividade --- */
 
 /* Tablets e telas menores */
 @media (max-width: 768px) {
     body.auth-page > header h1 {
-        font-size: 1.9em;
+        font-size: 1.9rem;
     }
+    
     main.auth-main {
-        padding: 20px 15px; /* Reduz padding lateral da main */
+        padding: 20px 15px;
     }
+    
     .auth-section {
-        padding: 30px 35px; /* Ajusta padding do card */
-        max-width: 450px; /* Mantém uma boa largura máxima */
+        padding: 35px 30px;
+        max-width: 450px;
     }
-    .auth-section h2 { /* Título dentro do card */
-        font-size: 1.6em;
+    
+    .auth-section h2 {
+        font-size: 1.6rem;
     }
 }
 
@@ -220,42 +308,79 @@ main.auth-main {
     body.auth-page > header {
         padding: 20px 15px;
     }
+    
     body.auth-page > header h1 {
-        font-size: 1.6em; /* Título da página menor */
+        font-size: 1.6rem;
+        flex-direction: column;
+        gap: 8px;
     }
+    
     main.auth-main {
-        padding: 15px 10px; /* Padding mínimo para a main */
-        justify-content: flex-start; /* Alinha o card ao topo em telas pequenas */
-        padding-top: 10px;
+        padding: 15px 10px;
+        justify-content: flex-start;
+        padding-top: 20px;
     }
+    
     .auth-section {
-        padding: 25px 20px; /* Padding interno do card reduzido */
-        margin-top: 0; /* Remove margem superior para aproximar do header */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* Sombra mais sutil */
+        padding: 30px 25px;
+        margin-top: 0;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     }
+    
     .auth-section label {
-        font-size: 0.9em;
+        font-size: 0.9rem;
     }
+    
     .auth-section input[type="text"],
     .auth-section input[type="email"],
     .auth-section input[type="password"] {
-        padding: 12px 14px;
-        font-size: 0.95em;
+        padding: 14px 16px;
+        font-size: 0.95rem;
         margin-bottom: 18px;
     }
+    
     .auth-section button[type="submit"] {
-        padding: 12px 18px;
-        font-size: 1em;
+        padding: 14px 20px;
+        font-size: 1rem;
     }
+    
     .auth-section p {
-        font-size: 0.9em;
-        margin-top: 20px;
+        font-size: 0.9rem;
+        margin: 12px 0;
     }
+    
     .auth-section .form-group.checkbox-group label {
-        font-size: 0.85em;
+        font-size: 0.85rem;
     }
+    
     .auth-section .back-link {
-        font-size: 0.85em;
-        padding: 9px 18px;
+        font-size: 0.85rem;
+        padding: 10px 20px;
     }
+}
+
+/* Animações */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-section {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.auth-section input:focus {
+    animation: pulse 0.3s ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }

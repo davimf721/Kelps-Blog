@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once 'includes/db_connect.php';
+require_once 'includes/notification_helper.php'; // Adicionar esta linha
 
 // Verificar se o usuário está logado
 if (!isset($_SESSION['user_id'])) {
@@ -16,34 +17,39 @@ $post_id = null;
 
 // Processar o formulário quando enviado
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $title = trim($_POST['title'] ?? '');
-    $content = trim($_POST['content'] ?? '');
+    $title = trim($_POST['title']);
+    $content = trim($_POST['content']);
+    $user_id = $_SESSION['user_id'];
     
-    // Validação básica
     if (empty($title)) {
-        $errors[] = "O título é obrigatório";
-    }
-    if (empty($content)) {
-        $errors[] = "O conteúdo é obrigatório";
+        $errors[] = 'O título é obrigatório.';
     }
     
-    // Se não houver erros, inserir o post no banco de dados
+    if (empty($content)) {
+        $errors[] = 'O conteúdo é obrigatório.';
+    }
+    
     if (empty($errors)) {
-        $user_id = $_SESSION['user_id'];
-        
-        // Escapar conteúdo para prevenir SQL injection
-        $title = pg_escape_string($dbconn, $title);
-        $content = pg_escape_string($dbconn, $content);
-        
-        $query = "INSERT INTO posts (title, content, user_id) VALUES ('$title', '$content', $user_id) RETURNING id";
-        $result = pg_query($dbconn, $query);
+        $query = "INSERT INTO posts (title, content, user_id) VALUES ($1, $2, $3) RETURNING id";
+        $result = pg_query_params($dbconn, $query, [$title, $content, $user_id]);
         
         if ($result) {
             $row = pg_fetch_assoc($result);
             $post_id = $row['id'];
+            
+            // *** NOVA FUNCIONALIDADE: Notificar seguidores sobre o novo post ***
+            $notifications_sent = notifyFollowersAboutNewPost($dbconn, $user_id, $post_id, $title);
+            
             $success = true;
+            
+            // Adicionar mensagem de sucesso com informação sobre notificações
+            if ($notifications_sent > 0) {
+                $_SESSION['success'] = "Post criado com sucesso! {$notifications_sent} seguidores foram notificados.";
+            } else {
+                $_SESSION['success'] = "Post criado com sucesso!";
+            }
         } else {
-            $errors[] = "Erro ao criar post: " . pg_last_error($dbconn);
+            $errors[] = 'Erro ao criar o post: ' . pg_last_error($dbconn);
         }
     }
 }
@@ -80,6 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .error {
             color: #ff6b6b;
             margin-bottom: 10px;
+            background-color: rgba(255, 107, 107, 0.1);
+            border-left: 4px solid #ff6b6b;
+            padding: 10px;
+            border-radius: 0 4px 4px 0;
         }
         .success-container {
             background-color: rgba(40, 40, 40, 0.9);
@@ -113,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             justify-content: center;
             gap: 15px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
         .success-button {
             display: inline-block;
@@ -152,137 +163,132 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 3px;
         }
         .editor-container {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
             gap: 20px;
+            height: calc(100vh - 300px);
+            min-height: 500px;
+            margin-bottom: 30px;
         }
+        
         @media (min-width: 992px) {
             .editor-container {
-                flex-direction: row;
-            }
-            .editor, .preview {
-                flex: 1;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr;
             }
         }
-        .editor-header {
+        
+        .editor, .preview {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .editor-header {
             margin-bottom: 10px;
         }
-        .preview {
-            border: 1px solid #444;
-            border-radius: 4px;
+        
+        #content {
+            flex-grow: 1;
+            height: 100%;
+            min-height: 400px;
+            font-size: 16px;
+            line-height: 1.6;
             padding: 15px;
-            background-color: #2a2a2a;
-            min-height: 300px;
+            resize: vertical;
+        }
+        
+        .preview {
+            height: 100%;
             overflow-y: auto;
         }
+        
         .preview-content {
-            line-height: 1.6;
+            flex-grow: 1;
+            height: 100%;
+            min-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
         }
+        
+        main {
+            padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
         .markdown-toolbar {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        .markdown-toolbar button {
-            padding: 5px 10px;
             background-color: #333;
+            padding: 8px;
+            border-radius: 4px 4px 0 0;
             border: 1px solid #555;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        .markdown-toolbar button:hover {
-            background-color: #444;
-        }
-        /* Estilos para o conteúdo Markdown renderizado */
-        .preview-content h1,
-        .preview-content h2,
-        .preview-content h3,
-        .preview-content h4,
-        .preview-content h5,
-        .preview-content h6 {
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-        }
-        .preview-content p {
-            margin-bottom: 1em;
-        }
-        .preview-content ul,
-        .preview-content ol {
-            margin-left: 2em;
-            margin-bottom: 1em;
-        }
-        .preview-content blockquote {
-            border-left: 4px solid #ccc;
-            padding-left: 1em;
-            margin-left: 0;
-            color: #777;
-        }
-        .preview-content code {
-            background-color: rgba(0, 0, 0, 0.1);
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-        .preview-content pre {
-            background-color: #1e1e1e;
-            padding: 1em;
-            border-radius: 5px;
-            overflow-x: auto;
-            margin-bottom: 1em;
-        }
-        .preview-content pre code {
-            background-color: transparent;
-            padding: 0;
-        }
-        .preview-content img {
-            max-width: 100%;
-            height: auto;
-        }
-        .preview-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 1em;
-        }
-        .preview-content table th,
-        .preview-content table td {
-            border: 1px solid #ccc;
-            padding: 0.5em;
-        }
-        /* Estilo para links nos posts */
-        .post-content a,
-        .markdown-preview a {
-            color: #4db6ac; /* Verde-azulado claro */
-            text-decoration: none;
-            border-bottom: 1px dotted #4db6ac;
-            transition: all 0.2s ease;
-        }
-
-        .post-content a:hover,
-        .markdown-preview a:hover {
-            color: #80cbc4; /* Verde-azulado mais claro ao passar o mouse */
-            border-bottom: 1px solid #80cbc4;
-        }
-
-        /* Garantir a legibilidade dos links em áreas de preview */
-        .markdown-preview a {
-            font-weight: 500;
-        }
-
-        /* Assegurar que links em códigos e blocos de código mantenham aparência consistente */
-        pre a, code a {
-            color: inherit;
             border-bottom: none;
         }
-
-        /* Estilo para links visitados */
-        .post-content a:visited,
-        .markdown-preview a:visited {
-            color: #9575cd; /* Roxo lavanda */
+        
+        input[type="text"]#title {
+            font-size: 18px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+        }
+        
+        /* Responsividade para o formulário de criação */
+        @media (max-width: 768px) {
+            .success-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .success-button {
+                width: 100%;
+                max-width: 250px;
+                text-align: center;
+            }
+            
+            .editor-container {
+                grid-template-columns: 1fr;
+                height: auto;
+                min-height: auto;
+            }
+            
+            .preview {
+                order: -1;
+                max-height: 300px;
+            }
+            
+            #content {
+                min-height: 300px;
+            }
+            
+            .preview-content {
+                min-height: 250px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            main {
+                padding: 0 10px;
+            }
+            
+            .markdown-tips {
+                padding: 12px;
+            }
+            
+            input[type="text"]#title {
+                font-size: 16px;
+                padding: 10px 12px;
+            }
+            
+            #content {
+                min-height: 250px;
+                padding: 12px;
+                font-size: 14px;
+            }
+            
+            .preview-content {
+                min-height: 200px;
+                padding: 12px;
+            }
         }
     </style>
 </head>

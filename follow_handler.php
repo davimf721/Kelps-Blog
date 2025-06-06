@@ -48,6 +48,26 @@ if (!$check_user || pg_num_rows($check_user) === 0) {
     exit;
 }
 
+// Verificar se a tabela followers existe
+$check_followers_table = pg_query($dbconn, "SELECT to_regclass('public.followers')");
+$followers_table_exists = (pg_fetch_result($check_followers_table, 0, 0) !== NULL);
+
+if (!$followers_table_exists) {
+    $create_followers_table = "
+    CREATE TABLE IF NOT EXISTS followers (
+        id SERIAL PRIMARY KEY,
+        follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(follower_id, following_id)
+    )";
+    pg_query($dbconn, $create_followers_table);
+    
+    // Criar índices para melhor performance
+    pg_query($dbconn, "CREATE INDEX IF NOT EXISTS idx_followers_follower_id ON followers(follower_id)");
+    pg_query($dbconn, "CREATE INDEX IF NOT EXISTS idx_followers_following_id ON followers(following_id)");
+}
+
 try {
     // Iniciar uma transação
     pg_query($dbconn, "BEGIN");
@@ -79,31 +99,51 @@ try {
         $get_username = pg_query_params($dbconn, "SELECT username FROM users WHERE id = $1", [$follower_id]);
         $follower_username = pg_fetch_result($get_username, 0, 0);
         
-        // Adicionar notificação para o usuário seguido
-        $notification_content = "$follower_username começou a seguir você.";
-        $add_notification = pg_query_params($dbconn, 
-            "INSERT INTO notifications (user_id, sender_id, type, content, reference_id) 
-             VALUES ($1, $2, 'follow', $3, $4)", 
-            [$following_id, $follower_id, $notification_content, $follower_id]
-        );
+        // Verificar se a tabela de notificações existe
+        $check_notifications_table = pg_query($dbconn, "SELECT to_regclass('public.notifications')");
+        $notifications_table_exists = (pg_fetch_result($check_notifications_table, 0, 0) !== NULL);
         
-        if (!$add_notification) {
-            throw new Exception(pg_last_error($dbconn));
-        }
-        
-        // Incrementar contador de notificações não lidas
-        $update_counter = pg_query_params($dbconn, 
-            "UPDATE users SET unread_notifications = unread_notifications + 1 WHERE id = $1",
-            [$following_id]
-        );
-        
-        if (!$update_counter) {
-            throw new Exception(pg_last_error($dbconn));
+        if ($notifications_table_exists) {
+            // Adicionar notificação para o usuário seguido
+            $notification_content = "$follower_username começou a seguir você.";
+            $add_notification = pg_query_params($dbconn, 
+                "INSERT INTO notifications (user_id, sender_id, type, content, reference_id) 
+                 VALUES ($1, $2, 'follow', $3, $4)", 
+                [$following_id, $follower_id, $notification_content, $follower_id]
+            );
+            
+            if (!$add_notification) {
+                throw new Exception(pg_last_error($dbconn));
+            }
+            
+            // Incrementar contador de notificações não lidas
+            $update_counter = pg_query_params($dbconn, 
+                "UPDATE users SET unread_notifications = COALESCE(unread_notifications, 0) + 1 WHERE id = $1",
+                [$following_id]
+            );
+            
+            if (!$update_counter) {
+                throw new Exception(pg_last_error($dbconn));
+            }
         }
         
         // Confirmar transação
         pg_query($dbconn, "COMMIT");
-        echo json_encode(['success' => true, 'message' => 'Você está seguindo este usuário agora.']);
+        
+        // Obter contadores atualizados
+        $follower_count_query = pg_query_params($dbconn, "SELECT COUNT(*) FROM followers WHERE following_id = $1", [$following_id]);
+        $follower_count = pg_fetch_result($follower_count_query, 0, 0);
+        
+        $following_count_query = pg_query_params($dbconn, "SELECT COUNT(*) FROM followers WHERE follower_id = $1", [$following_id]);
+        $following_count = pg_fetch_result($following_count_query, 0, 0);
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Você agora está seguindo este usuário!',
+            'action' => 'followed',
+            'follower_count' => (int)$follower_count,
+            'following_count' => (int)$following_count
+        ]);
         
     } else { // unfollow
         // Verificar se realmente está seguindo
@@ -130,11 +170,25 @@ try {
         
         // Confirmar transação
         pg_query($dbconn, "COMMIT");
-        echo json_encode(['success' => true, 'message' => 'Você deixou de seguir este usuário.']);
+        
+        // Obter contadores atualizados
+        $follower_count_query = pg_query_params($dbconn, "SELECT COUNT(*) FROM followers WHERE following_id = $1", [$following_id]);
+        $follower_count = pg_fetch_result($follower_count_query, 0, 0);
+        
+        $following_count_query = pg_query_params($dbconn, "SELECT COUNT(*) FROM followers WHERE follower_id = $1", [$following_id]);
+        $following_count = pg_fetch_result($following_count_query, 0, 0);
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Você deixou de seguir este usuário.',
+            'action' => 'unfollowed',
+            'follower_count' => (int)$follower_count,
+            'following_count' => (int)$following_count
+        ]);
     }
     
 } catch (Exception $e) {
     pg_query($dbconn, "ROLLBACK");
-    echo json_encode(['success' => false, 'message' => 'Erro: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Erro interno: ' . $e->getMessage()]);
 }
 ?>

@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once 'includes/db_connect.php';
 require_once 'libs/Parsedown.php'; // Incluir o Parsedown
 require_once 'includes/auth.php';
+require_once 'includes/notification_helper.php'; // Adicionar esta linha
 
 // Verificar se o ID do post foi fornecido
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -79,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['comment_content']) && 
         $insert_result = pg_query_params($dbconn, $insert_query, array($post_id, $user_id_comment, $comment_content));
         
         if ($insert_result) {
+            // *** NOVA FUNCIONALIDADE: Notificar autor do post sobre novo comentário ***
+            notifyUserAboutNewComment($dbconn, $post['user_id'], $user_id_comment, $post_id, $post['title']);
+            
             // Limpar erro da sessão se houver
             unset($_SESSION['comment_error']);
             header("Location: post.php?id=$post_id&comment_added=true#comments-section");
@@ -115,13 +119,11 @@ include 'includes/header.php';
                     <a href="edit_post.php?id=<?php echo $post['id']; ?>" class="action-button edit-button">
                         <i class="fas fa-edit"></i> Editar
                     </a>
-                    <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
-                         <a href="admin/manage_posts.php?delete_post=<?php echo $post['id']; ?>" 
-                           class="action-button delete-button" 
-                           onclick="return confirm('Tem certeza que deseja excluir este post? Esta ação é irreversível.');">
-                            <i class="fas fa-trash-alt"></i> Excluir (Admin)
-                        </a>
-                    <?php endif; ?>
+                    <a href="delete_post.php?id=<?php echo $post['id']; ?>" 
+                       class="action-button delete-button" 
+                       onclick="return confirm('Tem certeza que deseja excluir este post? Esta ação irá excluir também todos os comentários relacionados e é irreversível.');">
+                        <i class="fas fa-trash-alt"></i> Excluir<?php echo (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] && !$is_author) ? ' (Admin)' : ''; ?>
+                    </a>
                 </div>
             <?php endif; ?>
         </header>
@@ -136,10 +138,12 @@ include 'includes/header.php';
                     <?php echo !is_logged_in() ? 'disabled title="Faça login para dar upvote"' : ''; ?>>
                 <i class="fas fa-arrow-up upvote-icon"></i>
                 <span class="upvote-count"><?php echo (int)$post['upvotes_count']; ?></span>
+                <span class="upvote-text">Upvotes</span>
             </button>
-            <span class="comments-count-display">
-                <i class="far fa-comment"></i> <?php echo $comments_result ? pg_num_rows($comments_result) : 0; ?> Comentários
-            </span>
+            <div class="comments-count-display">
+                <i class="far fa-comment"></i> 
+                <span><?php echo $comments_result ? pg_num_rows($comments_result) : 0; ?> Comentários</span>
+            </div>
         </footer>
     </article>
 
@@ -186,16 +190,11 @@ include 'includes/header.php';
                         </div>
                          <?php if (is_logged_in() && ($_SESSION['user_id'] == $comment['user_id'] || (isset($_SESSION['is_admin']) && $_SESSION['is_admin']))): ?>
                             <div class="comment-actions">
-                                <?php if ($_SESSION['user_id'] == $comment['user_id']): ?>
-                                    <!-- <a href="edit_comment.php?id=<?php echo $comment['id']; ?>" class="action-link edit-comment-link">Editar</a> -->
-                                <?php endif; ?>
-                                <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
-                                    <a href="admin/manage_comments.php?delete_comment=<?php echo $comment['id']; ?>&post_id=<?php echo $post_id; ?>" 
-                                       class="action-link delete-comment-link"
-                                       onclick="return confirm('Tem certeza que deseja excluir este comentário?');">
-                                       Excluir (Admin)
-                                    </a>
-                                <?php endif; ?>
+                                <a href="delete_comment.php?id=<?php echo $comment['id']; ?>&post_id=<?php echo $post_id; ?>" 
+                                   class="action-link delete-comment-link"
+                                   onclick="return confirm('Tem certeza que deseja excluir este comentário?');">
+                                   Excluir<?php echo (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] && $_SESSION['user_id'] != $comment['user_id']) ? ' (Admin)' : ''; ?>
+                                </a>
                             </div>
                         <?php endif; ?>
                     </div>
