@@ -19,16 +19,35 @@ if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) {
     }
 }
 
-// Verificar se a tabela existe
+// Verificar se a tabela followers existe e criar se necessário
+$check_followers_table = pg_query($dbconn, "SELECT to_regclass('public.followers')");
+$followers_table_exists = (pg_fetch_result($check_followers_table, 0, 0) !== NULL);
+
+if (!$followers_table_exists) {
+    $create_followers_table = "
+    CREATE TABLE IF NOT EXISTS followers (
+        id SERIAL PRIMARY KEY,
+        follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(follower_id, following_id)
+    )";
+    pg_query($dbconn, $create_followers_table);
+    
+    // Criar índices para melhor performance
+    pg_query($dbconn, "CREATE INDEX IF NOT EXISTS idx_followers_follower_id ON followers(follower_id)");
+    pg_query($dbconn, "CREATE INDEX IF NOT EXISTS idx_followers_following_id ON followers(following_id)");
+}
+
+// Verificar se a tabela user_profiles existe e criar se necessário
 $check_table = pg_query($dbconn, "SELECT to_regclass('public.user_profiles')");
 $table_exists = (pg_fetch_result($check_table, 0, 0) !== NULL);
 
-// Se a tabela não existe, criar
 if (!$table_exists) {
     $create_profiles_table = "
     CREATE TABLE IF NOT EXISTS user_profiles (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         profile_image TEXT DEFAULT '/images/default-profile.png',
         banner_image TEXT DEFAULT '/images/default-banner.png',
         bio TEXT DEFAULT '',
@@ -37,6 +56,52 @@ if (!$table_exists) {
         CONSTRAINT user_profiles_user_id_key UNIQUE (user_id)
     )";
     pg_query($dbconn, $create_profiles_table);
+}
+
+// Buscar nome de usuário
+$username_query = "SELECT username, is_admin, is_banned FROM users WHERE id = $profile_user_id";
+$username_result = pg_query($dbconn, $username_query);
+
+if (!$username_result || pg_num_rows($username_result) == 0) {
+    $_SESSION['error'] = "Usuário não encontrado.";
+    header("Location: index.php");
+    exit();
+}
+
+$user_data = pg_fetch_assoc($username_result);
+$username_of_profile = $user_data['username'];
+
+// Determina se o PERFIL SENDO VISUALIZADO é de um administrador
+$is_profile_admin = !empty($user_data['is_admin']) && ($user_data['is_admin'] === true || $user_data['is_admin'] === 't' || $user_data['is_admin'] === 1 || $user_data['is_admin'] === '1');
+
+// Determina se o PERFIL SENDO VISUALIZADO está banido
+$is_profile_banned = !empty($user_data['is_banned']) && ($user_data['is_banned'] === true || $user_data['is_banned'] === 't' || $user_data['is_banned'] === 1 || $user_data['is_banned'] === '1');
+
+// SEMPRE calcular contadores de seguidores - independente de estar logado ou não
+$follower_count = 0;
+$following_count = 0;
+$is_following = false;
+
+// Contar seguidores (quantas pessoas seguem este perfil)
+$follower_count_query = pg_query($dbconn, "SELECT COUNT(*) FROM followers WHERE following_id = $profile_user_id");
+if ($follower_count_query) {
+    $follower_count = (int)pg_fetch_result($follower_count_query, 0, 0);
+}
+
+// Contar seguindo (quantas pessoas este perfil segue)
+$following_count_query = pg_query($dbconn, "SELECT COUNT(*) FROM followers WHERE follower_id = $profile_user_id");
+if ($following_count_query) {
+    $following_count = (int)pg_fetch_result($following_count_query, 0, 0);
+}
+
+// Verificar se o usuário atual está seguindo este perfil (apenas se estiver logado e não for o próprio perfil)
+if (isset($_SESSION['user_id']) && !$viewing_own_profile) {
+    $current_user_id = $_SESSION['user_id'];
+    
+    $follow_check = pg_query($dbconn, "SELECT id FROM followers 
+                                    WHERE follower_id = $current_user_id 
+                                    AND following_id = $profile_user_id");
+    $is_following = ($follow_check && pg_num_rows($follow_check) > 0);
 }
 
 // Verificar se já existem dados de perfil para este usuário
@@ -83,54 +148,6 @@ if (!$profile_result || pg_num_rows($profile_result) == 0) {
     }
     
     $bio = $profile_data['bio'];
-}
-
-// Buscar nome de usuário
-$username_query = "SELECT username, is_admin, is_banned FROM users WHERE id = $profile_user_id";
-$username_result = pg_query($dbconn, $username_query);
-
-if (!$username_result || pg_num_rows($username_result) == 0) {
-    $_SESSION['error'] = "Usuário não encontrado.";
-    header("Location: index.php");
-    exit();
-}
-
-$user_data = pg_fetch_assoc($username_result);
-$username_of_profile = $user_data['username']; // Renomeado para clareza
-
-// Determina se o PERFIL SENDO VISUALIZADO é de um administrador
-$is_profile_admin = !empty($user_data['is_admin']) && ($user_data['is_admin'] === true || $user_data['is_admin'] === 't' || $user_data['is_admin'] === 1 || $user_data['is_admin'] === '1');
-
-// Determina se o PERFIL SENDO VISUALIZADO está banido
-$is_profile_banned = !empty($user_data['is_banned']) && ($user_data['is_banned'] === true || $user_data['is_banned'] === 't' || $user_data['is_banned'] === 1 || $user_data['is_banned'] === '1');
-
-// Verificar se o usuário atual está seguindo este perfil
-$is_following = false;
-$follower_count = 0;
-$following_count = 0;
-
-if (isset($_SESSION['user_id']) && !$viewing_own_profile) {
-    $current_user_id = $_SESSION['user_id'];
-    
-    // Verificar se a tabela followers existe
-    $check_followers_table = pg_query($dbconn, "SELECT to_regclass('public.followers')");
-    $followers_table_exists = (pg_fetch_result($check_followers_table, 0, 0) !== NULL);
-    
-    if ($followers_table_exists) {
-        // Verificar se o usuário atual está seguindo este perfil
-        $follow_check = pg_query($dbconn, "SELECT id FROM followers 
-                                        WHERE follower_id = $current_user_id 
-                                        AND following_id = $profile_user_id");
-        $is_following = ($follow_check && pg_num_rows($follow_check) > 0);
-        
-        // Contar seguidores
-        $follower_count_query = pg_query($dbconn, "SELECT COUNT(*) FROM followers WHERE following_id = $profile_user_id");
-        $follower_count = pg_fetch_result($follower_count_query, 0, 0);
-        
-        // Contar quem o usuário está seguindo
-        $following_count_query = pg_query($dbconn, "SELECT COUNT(*) FROM followers WHERE follower_id = $profile_user_id");
-        $following_count = pg_fetch_result($following_count_query, 0, 0);
-    }
 }
 
 // Buscar posts do usuário
@@ -483,11 +500,11 @@ include 'includes/header.php';
                 </div>
                 <div class="stat followers-count">
                     <i class="fas fa-user-friends"></i>
-                    <span class="stat-value"><?php echo $follower_count; ?></span> seguidores
+                    <span class="stat-value" id="followers-count"><?php echo $follower_count; ?></span> seguidores
                 </div>
                 <div class="stat following-count">
                     <i class="fas fa-heart"></i>
-                    <span class="stat-value"><?php echo $following_count; ?></span> seguindo
+                    <span class="stat-value" id="following-count"><?php echo $following_count; ?></span> seguindo
                 </div>
             </div>
             
@@ -537,7 +554,9 @@ include 'includes/header.php';
                             <span class="upvote-count"><i class="fas fa-arrow-up"></i> <?php echo $post['upvotes_count'] ?? 0; ?></span>
                             <span class="comment-count"><i class="far fa-comment"></i> <?php echo $post['comments_count'] ?? 0; ?> comentários</span>
                         </div>
-                        <a href="post.php?id=${post.id}" class="read-more-link">Leia mais</a>
+                        <!-- <a href="post.php?id=${post.id}" class="read-more-link">
+                            Leia mais <i class="fas fa-arrow-right"></i>
+                        </a> -->
                     </article>
                 <?php endwhile; ?>
             </div>
@@ -617,6 +636,11 @@ include 'includes/header.php';
                 const userId = this.getAttribute('data-user-id');
                 const isFollowing = this.classList.contains('unfollow');
                 
+                // Desabilitar botão durante a requisição
+                this.disabled = true;
+                const originalContent = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+                
                 // Fazer requisição AJAX para seguir/deixar de seguir
                 fetch('follow_handler.php', {
                     method: 'POST',
@@ -632,24 +656,86 @@ include 'includes/header.php';
                         if (isFollowing) {
                             this.innerHTML = '<i class="fas fa-user-plus"></i> Seguir';
                             this.classList.remove('unfollow');
-                            document.querySelector('.followers-count .stat-value').textContent = 
-                                parseInt(document.querySelector('.followers-count .stat-value').textContent) - 1;
+                            // Decrementar contador de seguidores
+                            const followersElement = document.getElementById('followers-count');
+                            const currentCount = parseInt(followersElement.textContent);
+                            followersElement.textContent = Math.max(0, currentCount - 1);
                         } else {
                             this.innerHTML = '<i class="fas fa-user-minus"></i> Deixar de Seguir';
                             this.classList.add('unfollow');
-                            document.querySelector('.followers-count .stat-value').textContent = 
-                                parseInt(document.querySelector('.followers-count .stat-value').textContent) + 1;
+                            // Incrementar contador de seguidores
+                            const followersElement = document.getElementById('followers-count');
+                            const currentCount = parseInt(followersElement.textContent);
+                            followersElement.textContent = currentCount + 1;
                         }
+                        
+                        // Mostrar mensagem de sucesso temporária
+                        showMessage(data.message, 'success');
                     } else {
-                        alert('Erro: ' + data.message);
+                        // Restaurar conteúdo original em caso de erro
+                        this.innerHTML = originalContent;
+                        showMessage('Erro: ' + data.message, 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Erro:', error);
-                    alert('Ocorreu um erro ao processar sua solicitação.');
+                    this.innerHTML = originalContent;
+                    showMessage('Ocorreu um erro ao processar sua solicitação.', 'error');
+                })
+                .finally(() => {
+                    // Reabilitar botão
+                    this.disabled = false;
                 });
             });
         }
     });
+    
+    function showMessage(message, type) {
+        // Remover mensagem anterior se existir
+        const existingMessage = document.querySelector('.follow-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        // Criar nova mensagem
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `follow-message follow-message-${type}`;
+        messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        
+        // Adicionar estilos
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            ${type === 'success' ? 'background-color: #28a745;' : 'background-color: #dc3545;'}
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        // Animar entrada
+        setTimeout(() => {
+            messageDiv.style.opacity = '1';
+            messageDiv.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remover após 3 segundos
+        setTimeout(() => {
+            messageDiv.style.opacity = '0';
+            messageDiv.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 300);
+        }, 3000);
+    }
 </script>
 <?php endif; ?>

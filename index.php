@@ -1,18 +1,19 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 require_once 'includes/db_connect.php';
-require_once 'libs/Parsedown.php'; // Incluir o Parsedown
 require_once 'includes/auth.php';
+
+// Incluir Parsedown se existir
+if (file_exists('libs/Parsedown.php')) {
+    require_once 'libs/Parsedown.php';
+}
+
+// Verificar se o usuário está banido (será redirecionado automaticamente se necessário)
+check_user_access();
 
 // Definir variáveis para o header
 $page_title = 'Kelps Blog';
 $current_page = 'home';
-
-// Inicializar o Parsedown
-$parsedown = new Parsedown();
-$parsedown->setSafeMode(true); // Ativar modo seguro para prevenir XSS
 
 // Incluir o header compartilhado
 include 'includes/header.php';
@@ -55,16 +56,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Verificar se o usuário está logado (será passado do PHP)
                 const isLoggedIn = <?php echo is_logged_in() ? 'true' : 'false'; ?>;
                 
+                // Limitar o conteúdo do post para preview
+                let contentPreview = post.content;
+                if (contentPreview.length > 200) {
+                    contentPreview = contentPreview.substring(0, 200) + '...';
+                }
+                
                 container.innerHTML += `
                     <article class="post-summary">
-                        <h3><a href="post.php?id=${post.id}">${post.title}</a></h3>
+                        <h3><a href="post.php?id=${post.id}">${escapeHtml(post.title)}</a></h3>
                         <p class="post-meta">
                             Por: <a href="profile.php?user_id=${post.user_id}" class="author-link">
-                                ${post.author}${adminBadge}
+                                ${escapeHtml(post.author)}${adminBadge}
                             </a> 
                             em ${new Date(post.created_at).toLocaleString('pt-BR')}
                         </p>
-                        <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+                        <div class="post-content-preview">${escapeHtml(contentPreview)}</div>
                         <div class="post-stats">
                             <button class="upvote-button ${post.user_has_upvoted ? 'upvoted' : ''}" 
                                     data-post-id="${post.id}"
@@ -74,9 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </button>
                             <span class="comment-count"><i class="far fa-comment"></i> ${post.comments_count || 0} comentários</span>
                         </div>
-                        <a href="post.php?id=${post.id}" class="read-more-link">
-                            Leia mais <i class="fas fa-arrow-right"></i>
-                        </a>
+                       
                     </article>
                 `;
             });
@@ -86,8 +91,21 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Erro ao carregar posts:', error);
+            const container = document.querySelector('.posts-container');
             container.innerHTML = '<div class="error-message">Erro ao carregar posts. Tente novamente mais tarde.</div>';
         });
+    }
+    
+    // Função para escapar HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
     
     // Função para configurar os botões de upvote
@@ -140,3 +158,5 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchAndDisplayPosts();
 });
 </script>
+
+<!-- CSS específico para a página inicial já está no style.css principal -->

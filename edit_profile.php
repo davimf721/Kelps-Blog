@@ -12,7 +12,7 @@ $max_width = 1200; // Largura máxima para redimensionamento
 $max_height = 1200; // Altura máxima para redimensionamento
 
 // Verificar se o usuário está logado
-if (!isLoggedIn()) {
+if (!is_logged_in()) {
     $_SESSION['error'] = "Você precisa estar logado para acessar esta página.";
     header("Location: login.php");
     exit();

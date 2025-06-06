@@ -2,6 +2,7 @@
 session_start();
 require_once 'includes/db_connect.php';
 require_once 'includes/auth.php';
+require_once 'includes/notification_helper.php'; // Adicionar esta linha
 
 header('Content-Type: application/json');
 
@@ -30,12 +31,18 @@ $action = $input['action']; // 'add' ou 'remove'
 $user_id = $_SESSION['user_id'];
 
 try {
-    // Verificar se o post existe
-    $post_check = pg_query_params($dbconn, "SELECT id FROM posts WHERE id = $1", [$post_id]);
+    // Verificar se o post existe e buscar informações do autor
+    $post_check = pg_query_params($dbconn, 
+        "SELECT id, title, user_id FROM posts WHERE id = $1", 
+        [$post_id]
+    );
+    
     if (!$post_check || pg_num_rows($post_check) == 0) {
         echo json_encode(['success' => false, 'message' => 'Post não encontrado']);
         exit;
     }
+    
+    $post_info = pg_fetch_assoc($post_check);
 
     // Verificar se o usuário já deu upvote
     $upvote_check = pg_query_params($dbconn, 
@@ -56,6 +63,9 @@ try {
             throw new Exception('Erro ao adicionar upvote');
         }
         
+        // *** NOVA FUNCIONALIDADE: Notificar autor sobre upvote ***
+        notifyUserAboutPostUpvote($dbconn, $post_info['user_id'], $user_id, $post_id, $post_info['title']);
+        
     } elseif ($action === 'remove' && $has_upvoted) {
         // Remover upvote
         $delete_result = pg_query_params($dbconn,
@@ -67,35 +77,29 @@ try {
             throw new Exception('Erro ao remover upvote');
         }
     }
-
-    // Atualizar contador na tabela posts
-    $update_result = pg_query_params($dbconn,
-        "UPDATE posts SET upvotes_count = (
-            SELECT COUNT(*) FROM post_upvotes WHERE post_id = $1
-        ) WHERE id = $1",
-        [$post_id]
-    );
-
-    if (!$update_result) {
-        throw new Exception('Erro ao atualizar contador');
-    }
-
-    // Obter novo contador
-    $count_result = pg_query_params($dbconn, 
-        "SELECT upvotes_count FROM posts WHERE id = $1", 
+    
+    // Contar upvotes atualizados
+    $count_result = pg_query_params($dbconn,
+        "SELECT COUNT(*) as count FROM post_upvotes WHERE post_id = $1",
         [$post_id]
     );
     
-    $new_count = pg_fetch_result($count_result, 0, 0);
-
+    $count_row = pg_fetch_assoc($count_result);
+    $upvotes_count = (int)$count_row['count'];
+    
+    // Atualizar contador na tabela posts
+    pg_query_params($dbconn,
+        "UPDATE posts SET upvotes_count = $1 WHERE id = $2",
+        [$upvotes_count, $post_id]
+    );
+    
     echo json_encode([
-        'success' => true, 
-        'upvotes_count' => (int)$new_count,
-        'user_upvoted' => $action === 'add'
+        'success' => true,
+        'upvotes_count' => $upvotes_count,
+        'action_performed' => $action
     ]);
-
+    
 } catch (Exception $e) {
-    error_log("Erro no upvote: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Erro interno do servidor']);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

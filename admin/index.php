@@ -26,8 +26,8 @@ if ($users_query) $stats['users'] = pg_fetch_result($users_query, 0, 0);
 if ($posts_query) $stats['posts'] = pg_fetch_result($posts_query, 0, 0);
 if ($comments_query) $stats['comments'] = pg_fetch_result($comments_query, 0, 0);
 
-// Buscar todos os usuários
-$users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC");
+// Buscar todos os usuários com informação de banimento
+$users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT 10");
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -137,18 +137,29 @@ $users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, created
             cursor: pointer;
             font-size: 0.9rem;
             transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
         
         .admin-btn:hover {
             background-color: #0a6aa8;
+            color: white;
         }
         
-        .admin-btn.delete {
+        .admin-btn.delete, .admin-btn.ban {
             background-color: #ca0e0e;
         }
         
-        .admin-btn.delete:hover {
+        .admin-btn.delete:hover, .admin-btn.ban:hover {
             background-color: #a80a0a;
+        }
+        
+        .admin-btn.unban {
+            background-color: #28a745;
+        }
+        
+        .admin-btn.unban:hover {
+            background-color: #218838;
         }
         
         .admin-badge {
@@ -278,9 +289,21 @@ $users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, created
                                         <?php endif; ?>
                                     </td>
                                     <td class="admin-actions">
-                                        <a href="view_user.php?id=<?php echo $user['id']; ?>" class="admin-btn">Ver</a>
+                                        <a href="../profile.php?user_id=<?php echo $user['id']; ?>" class="admin-btn">Ver</a>
                                         <?php if ($user['is_admin'] != 't'): ?>
-                                            <a href="ban_user.php?id=<?php echo $user['id']; ?>" class="admin-btn delete">Banir</a>
+                                            <?php if ($user['is_banned'] == 't'): ?>
+                                                <a href="users.php?action=toggle_ban&id=<?php echo $user['id']; ?>" 
+                                                   class="admin-btn unban"
+                                                   onclick="return confirm('Tem certeza que deseja desbanir este usuário?');">
+                                                   Desbanir
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="users.php?action=toggle_ban&id=<?php echo $user['id']; ?>" 
+                                                   class="admin-btn ban"
+                                                   onclick="return confirm('Tem certeza que deseja banir este usuário?');">
+                                                   Banir
+                                                </a>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
