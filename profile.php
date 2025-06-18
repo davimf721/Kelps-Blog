@@ -554,9 +554,6 @@ include 'includes/header.php';
                             <span class="upvote-count"><i class="fas fa-arrow-up"></i> <?php echo $post['upvotes_count'] ?? 0; ?></span>
                             <span class="comment-count"><i class="far fa-comment"></i> <?php echo $post['comments_count'] ?? 0; ?> comentários</span>
                         </div>
-                        <!-- <a href="post.php?id=${post.id}" class="read-more-link">
-                            Leia mais <i class="fas fa-arrow-right"></i>
-                        </a> -->
                     </article>
                 <?php endwhile; ?>
             </div>
@@ -619,6 +616,16 @@ include 'includes/header.php';
                     <i class="fas fa-shield-alt"></i> Painel Admin
                 </a>
                 <?php endif; ?>
+                
+                <!-- Zona de Perigo -->
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444;">
+                    <a href="delete_account.php" style="background-color: #dc3545; color: #fff; padding: 10px; border-radius: 5px; text-decoration: none; text-align: center; font-weight: bold; transition: all 0.3s ease;">
+                        <i class="fas fa-user-times"></i> Excluir Conta
+                    </a>
+                    <p style="font-size: 0.75em; color: #888; text-align: center; margin: 5px 0 0 0;">
+                        Ação irreversível
+                    </p>
+                </div>
             </div>
         </div>
         <?php endif; ?>
