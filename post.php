@@ -647,16 +647,3 @@ header nav {
         font-size: 0.97rem;
     }
 }
-<<<<<<< HEAD
-=======
-/* Garante que o menu hambúrguer do header sempre fique visível e acima do conteúdo */
-header {
-    z-index: 9999 !important;
-    position: sticky !important;
-    top: 0 !important;
-}
-.mobile-menu-toggle {
-    display: block !important;
-}
-</style>
->>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
