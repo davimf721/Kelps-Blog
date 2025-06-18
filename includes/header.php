@@ -1,192 +1,300 @@
 <?php
-// Em vez de usar require_once, que causa erro fatal se o arquivo não existe,
-// Vamos incluir diretamente as funcionalidades necessárias
-
+// filepath: /home/davimf7221/projetos/Kelps-Blog/includes/header.php
 // Iniciar sessão se ainda não estiver ativa
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Verificar contagem de notificações não lidas se o usuário estiver logado
-if (isset($_SESSION['user_id'])) {
-    // Conectar ao banco de dados se ainda não estiver conectado
-    if (!isset($dbconn) || !$dbconn) {
+// Incluir funcionalidades de autenticação se não foram carregadas
+if (!function_exists('is_logged_in')) {
+    // Tentar incluir auth.php se existir
+    if (file_exists(__DIR__ . '/auth.php')) {
+        require_once __DIR__ . '/auth.php';
+    } else {
+        // Definir função básica se auth.php não existir
+        function is_logged_in() {
+            return isset($_SESSION['user_id']);
+        }
+    }
+}
+
+// Verificar notificações não lidas
+$unread_notifications = 0;
+if (is_logged_in()) {
+    // Incluir conexão com banco se não foi incluída
+    if (!isset($dbconn)) {
         if (file_exists(__DIR__ . '/db_connect.php')) {
             require_once __DIR__ . '/db_connect.php';
-            
-            // Atualizar contador de notificações
-            $user_id = $_SESSION['user_id'];
-            $check_notifications = pg_query($dbconn, "SELECT unread_notifications FROM users WHERE id = $user_id");
-            
-            if ($check_notifications && pg_num_rows($check_notifications) > 0) {
-                $_SESSION['unread_notifications'] = pg_fetch_result($check_notifications, 0, 0);
-            }
+        }
+    }
+    
+    // Verificar notificações apenas se temos conexão com banco
+    if (isset($dbconn) && $dbconn) {
+        $user_id = (int)$_SESSION['user_id']; // Sanitizar input
+        $notification_query = "SELECT COUNT(*) as count FROM notifications WHERE user_id = $user_id AND is_read = FALSE";
+        $notification_result = pg_query($dbconn, $notification_query);
+        if ($notification_result) {
+            $notification_data = pg_fetch_assoc($notification_result);
+            $unread_notifications = (int)$notification_data['count'];
         }
     }
 }
 
-// Incluir função de autenticação
-require_once __DIR__ . '/auth.php';
+// Definir página atual se não foi definida
+if (!isset($current_page)) {
+    $current_page = '';
+}
 
-// Verificar se o usuário é admin
-$is_admin = false;
-if (isset($_SESSION['user_id'])) {
-    $user_id = $_SESSION['user_id'];
-    if (isset($dbconn)) {
-        $admin_check = pg_query($dbconn, "SELECT is_admin FROM users WHERE id = $user_id");
-        if ($admin_check && pg_num_rows($admin_check) > 0) {
-            $is_admin = pg_fetch_result($admin_check, 0, 0) == 't';
-        }
-    }
+// Definir título da página se não foi definido
+if (!isset($page_title)) {
+    $page_title = 'Kelps Blog';
+}
+
+// Determinar o caminho correto para CSS baseado na estrutura de diretórios
+$css_path = 'css/style.css';
+if (strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) {
+    $css_path = '../css/style.css';
 }
 ?>
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'Kelps Blog'; ?></title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/responsive-fixes.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="/images/file.jpg">
+    <title><?php echo htmlspecialchars($page_title); ?></title>
+    <link rel="stylesheet" href="<?php echo $css_path; ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta name="description" content="Kelps Blog - Compartilhe suas ideias e conhecimentos">
+    <meta name="robots" content="index, follow">
 </head>
 <body class="<?php echo isset($current_page) ? 'page-' . $current_page : ''; ?>">
     <header>
         <div class="site-logo">
-            <img src="images/file.jpg" alt="Kelps Blog" onerror="this.style.display='none'">
+            <img src="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>images/logo.png" 
+                 alt="Kelps Blog Logo" 
+                 onerror="this.style.display='none'">
         </div>
         
-        <h1 class="site-title">Kelps Blog</h1>
+        <h1 class="site-title">
+            <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>index.php" 
+               style="color: inherit; text-decoration: none;">
+                Kelps Blog
+            </a>
+        </h1>
         
-        <!-- Botão do menu hamburger para mobile -->
+        <!-- Botão do menu hambúrguer para mobile -->
         <button class="mobile-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
-            <i class="fas fa-bars hamburger"></i>
+            <span class="hamburger">
+                <i class="fas fa-bars"></i>
+            </span>
         </button>
-        
+
         <nav role="navigation" aria-label="Menu principal">
             <ul>
-                <li><a href="index.php" <?php echo (isset($current_page) && $current_page === 'home') ? 'class="active"' : ''; ?>>
-                    <i class="fas fa-home"></i> Home
-                </a></li>
+                <li>
+                    <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>index.php" 
+                       class="<?php echo $current_page === 'home' ? 'active' : ''; ?>" 
+                       aria-label="Página inicial">
+                        <i class="fas fa-home" aria-hidden="true"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
                 
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <li><a href="create_post.php" <?php echo (isset($current_page) && $current_page === 'create') ? 'class="active"' : ''; ?>>
-                        <i class="fas fa-plus"></i> Criar Post
-                    </a></li>
+                <?php if (is_logged_in()): ?>
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>create_post.php" 
+                           class="<?php echo $current_page === 'create_post' ? 'active' : ''; ?>" 
+                           aria-label="Criar novo post">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                            <span>Criar Post</span>
+                        </a>
+                    </li>
                     
-                    <!-- Link para Notificações -->
-                    <li><a href="notifications.php" <?php echo (isset($current_page) && $current_page === 'notifications') ? 'class="active"' : ''; ?> class="notifications-link">
-                        <i class="fas fa-bell"></i> 
-                        <span class="notifications-text">Notificações</span>
-                        <?php if (isset($_SESSION['unread_notifications']) && $_SESSION['unread_notifications'] > 0): ?>
-                            <span class="notification-badge"><?php echo $_SESSION['unread_notifications']; ?></span>
-                        <?php endif; ?>
-                    </a></li>
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>notifications.php" 
+                           class="<?php echo $current_page === 'notifications' ? 'active' : ''; ?> notifications-link" 
+                           aria-label="Notificações">
+                            <i class="fas fa-bell" aria-hidden="true"></i>
+                            <span>Notificações</span>
+                            <?php if ($unread_notifications > 0): ?>
+                                <span class="notification-badge" aria-label="<?php echo $unread_notifications; ?> notificações não lidas">
+                                    <?php echo $unread_notifications > 99 ? '99+' : $unread_notifications; ?>
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
                     
                     <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
-                        <li><a href="admin/" class="admin-link">
-                            <i class="fas fa-shield-alt"></i> Admin
-                        </a></li>
+                        <li>
+                            <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '' : '../admin/'; ?>dashboard.php" 
+                               class="<?php echo $current_page === 'admin' ? 'active' : ''; ?>" 
+                               aria-label="Painel administrativo">
+                                <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                                <span>Admin</span>
+                            </a>
+                        </li>
                     <?php endif; ?>
                     
-                    <li><a href="profile.php?user_id=<?php echo $_SESSION['user_id']; ?>" <?php echo (isset($current_page) && $current_page === 'profile') ? 'class="active"' : ''; ?>>
-                        <i class="fas fa-user"></i> 
-                        <span class="username-text">Perfil (<?php echo htmlspecialchars($_SESSION['username']); ?>)</span>
-                    </a></li>
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>profile.php" 
+                           class="<?php echo $current_page === 'profile' ? 'active' : ''; ?>" 
+                           aria-label="Meu perfil">
+                            <i class="fas fa-user" aria-hidden="true"></i>
+                            <span class="username-text">Perfil (<?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuário'); ?>)</span>
+                        </a>
+                    </li>
                     
-                    <li><a href="logout.php" class="logout-link">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a></li>
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>logout.php" 
+                           aria-label="Sair da conta">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
                 <?php else: ?>
-                    <li><a href="login.php" <?php echo (isset($current_page) && $current_page === 'login') ? 'class="active"' : ''; ?>>
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </a></li>
-                    <li><a href="register.php" <?php echo (isset($current_page) && $current_page === 'register') ? 'class="active"' : ''; ?>>
-                        <i class="fas fa-user-plus"></i> Registrar
-                    </a></li>
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>login.php" 
+                           class="<?php echo $current_page === 'login' ? 'active' : ''; ?>" 
+                           aria-label="Fazer login">
+                            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                            <span>Login</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>register.php" 
+                           class="<?php echo $current_page === 'register' ? 'active' : ''; ?>" 
+                           aria-label="Criar conta">
+                            <i class="fas fa-user-plus" aria-hidden="true"></i>
+                            <span>Registrar</span>
+                        </a>
+                    </li>
                 <?php endif; ?>
             </ul>
         </nav>
     </header>
 
     <main>
-        <!-- Mensagens de sucesso/erro -->
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert success">
-                <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
-            </div>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert error">
-                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
-            </div>
-        <?php endif; ?>
+        <!-- Conteúdo da página será inserido aqui -->
 
-    <script>
-        // Script do menu hamburger
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.querySelector('.mobile-menu-toggle');
-            const body = document.body;
-            const nav = document.querySelector('nav');
+<script>
+// Script CORRIGIDO para menu hambúrguer responsivo
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const body = document.body;
+    const nav = document.querySelector('nav');
+    
+    // Verificar se os elementos existem
+    if (!mobileMenuToggle || !nav) {
+        console.log('Elementos do menu não encontrados');
+        return;
+    }
+    
+    console.log('Menu hambúrguer encontrado, inicializando...');
+    
+    // Função para abrir/fechar menu
+    function toggleMenu() {
+        const isOpen = body.classList.contains('mobile-nav-open');
+        
+        console.log('Toggle menu - Estado atual:', isOpen ? 'aberto' : 'fechado');
+        
+        if (isOpen) {
+            // Fechar menu
+            body.classList.remove('mobile-nav-open');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            mobileMenuToggle.setAttribute('aria-label', 'Abrir menu');
             
-            if (menuToggle) {
-                menuToggle.addEventListener('click', function() {
-                    const isOpen = body.classList.contains('mobile-nav-open');
-                    
-                    if (isOpen) {
-                        // Fechar menu
-                        body.classList.remove('mobile-nav-open');
-                        menuToggle.setAttribute('aria-expanded', 'false');
-                        menuToggle.setAttribute('aria-label', 'Abrir menu');
-                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
-                        body.style.overflow = '';
-                    } else {
-                        // Abrir menu
-                        body.classList.add('mobile-nav-open');
-                        menuToggle.setAttribute('aria-expanded', 'true');
-                        menuToggle.setAttribute('aria-label', 'Fechar menu');
-                        menuToggle.querySelector('.hamburger').className = 'fas fa-times hamburger';
-                        body.style.overflow = 'hidden';
-                    }
-                });
-                
-                // Fechar menu ao clicar nos links (mobile)
-                if (nav) {
-                    nav.addEventListener('click', function(e) {
-                        if (e.target.tagName === 'A' && window.innerWidth <= 768) {
-                            body.classList.remove('mobile-nav-open');
-                            menuToggle.setAttribute('aria-expanded', 'false');
-                            menuToggle.setAttribute('aria-label', 'Abrir menu');
-                            menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
-                            body.style.overflow = '';
-                        }
-                    });
-                }
-                
-                // Fechar menu ao redimensionar janela
-                window.addEventListener('resize', function() {
-                    if (window.innerWidth > 768 && body.classList.contains('mobile-nav-open')) {
-                        body.classList.remove('mobile-nav-open');
-                        menuToggle.setAttribute('aria-expanded', 'false');
-                        menuToggle.setAttribute('aria-label', 'Abrir menu');
-                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
-                        body.style.overflow = '';
-                    }
-                });
-                
-                // Fechar menu com tecla ESC
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && body.classList.contains('mobile-nav-open')) {
-                        body.classList.remove('mobile-nav-open');
-                        menuToggle.setAttribute('aria-expanded', 'false');
-                        menuToggle.setAttribute('aria-label', 'Abrir menu');
-                        menuToggle.querySelector('.hamburger').className = 'fas fa-bars hamburger';
-                        body.style.overflow = '';
-                        menuToggle.focus();
-                    }
-                });
+            // Restaurar scroll
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+            
+            console.log('Menu fechado');
+        } else {
+            // Abrir menu
+            body.classList.add('mobile-nav-open');
+            mobileMenuToggle.setAttribute('aria-expanded', 'true');
+            mobileMenuToggle.setAttribute('aria-label', 'Fechar menu');
+            
+            // Prevenir scroll
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            
+            console.log('Menu aberto');
+        }
+    }
+    
+    // Event listener para o botão hambúrguer
+    mobileMenuToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Botão hambúrguer clicado');
+        toggleMenu();
+    });
+    
+    // Event listener para touch events (mobile)
+    mobileMenuToggle.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        console.log('Touch no botão hambúrguer');
+        toggleMenu();
+    });
+    
+    // Fechar menu ao clicar em links
+    const navLinks = document.querySelectorAll('nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768 && body.classList.contains('mobile-nav-open')) {
+                console.log('Link clicado, fechando menu');
+                setTimeout(() => {
+                    body.classList.remove('mobile-nav-open');
+                    mobileMenuToggle.setAttribute('aria-expanded', 'false');
+                    mobileMenuToggle.setAttribute('aria-label', 'Abrir menu');
+                    document.body.style.overflow = '';
+                    document.documentElement.style.overflow = '';
+                }, 150);
             }
         });
-    </script>
+    });
+    
+    // Fechar menu com tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && body.classList.contains('mobile-nav-open')) {
+            console.log('ESC pressionado, fechando menu');
+            body.classList.remove('mobile-nav-open');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            mobileMenuToggle.setAttribute('aria-label', 'Abrir menu');
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+            mobileMenuToggle.focus();
+        }
+    });
+    
+    // Fechar menu ao clicar fora
+    nav.addEventListener('click', function(e) {
+        if (e.target === nav && body.classList.contains('mobile-nav-open')) {
+            console.log('Clique fora do menu, fechando');
+            body.classList.remove('mobile-nav-open');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            mobileMenuToggle.setAttribute('aria-label', 'Abrir menu');
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        }
+    });
+    
+    // Ajustar menu em mudanças de tamanho da tela
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            // Desktop: garantir que o menu esteja visível e limpar estados mobile
+            body.classList.remove('mobile-nav-open');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            mobileMenuToggle.setAttribute('aria-label', 'Abrir menu');
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+            console.log('Redimensionado para desktop, menu resetado');
+        }
+    });
+    
+    console.log('Menu hambúrguer inicializado com sucesso');
+});
+</script>
