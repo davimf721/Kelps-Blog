@@ -82,6 +82,7 @@ header h1.site-title {
 
 /* Mostrar APENAS em mobile */
 @media (max-width: 768px) {
+<<<<<<< HEAD
     /* Ajustar header para mobile */
     header {
         padding: 10px 15px;
@@ -90,10 +91,14 @@ header h1.site-title {
     
     /* MOSTRAR botão hambúrguer no mobile */
     .mobile-menu-toggle {
+=======
+    .menu-toggle {
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
         display: flex !important;
         align-items: center;
         justify-content: center;
     }
+<<<<<<< HEAD
     
     /* Ajustar logo e título */
     .site-logo img {
@@ -105,11 +110,17 @@ header h1.site-title {
         font-size: 1.4rem;
         text-align: left;
     }
+=======
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
 }
 
 /* Menu hamburger - FORÇAR ESCONDIDO NO DESKTOP */
 .mobile-menu-toggle {
+<<<<<<< HEAD
     display: none; /* Escondido por padrão */
+=======
+    display: none;
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
     background: none;
     border: none;
     color: white;
@@ -1230,6 +1241,7 @@ header {
         min-height: 50px;
     }
     
+<<<<<<< HEAD
     /* MOSTRAR botão hambúrguer no mobile */
     .mobile-menu-toggle {
         display: flex !important;
@@ -1237,6 +1249,8 @@ header {
         justify-content: center;
     }
     
+=======
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
     /* Ajustar logo e título */
     .site-logo img {
         height: 35px;
@@ -1246,6 +1260,43 @@ header {
     header h1.site-title {
         font-size: 1.4rem;
         text-align: left;
+    }
+    
+<<<<<<< HEAD
+    /* ESCONDER navegação principal no mobile por padrão */
+    nav {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(43, 43, 43, 0.98);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    
+    /* Menu mobile ABERTO */
+    .mobile-nav-open nav {
+        display: flex !important;
+        opacity: 1;
+        visibility: visible;
+    }
+    
+=======
+    /* MOSTRAR botão hambúrguer APENAS no mobile */
+    .menu-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
     }
     
     /* ESCONDER navegação principal no mobile por padrão */
@@ -1276,6 +1327,7 @@ header {
         visibility: visible;
     }
     
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
     /* Prevenir scroll quando menu está aberto */
     .mobile-nav-open {
         overflow: hidden !important;
@@ -1378,12 +1430,18 @@ header {
     }
     
     .mobile-menu-toggle {
+<<<<<<< HEAD
         display: flex !important;
         width: 40px;
         height: 40px;
         font-size: 1.3em;
         align-items: center;
         justify-content: center;
+=======
+        width: 40px;
+        height: 40px;
+        font-size: 1.3em;
+>>>>>>> 75358436f5529c69150d87482f7c6617c9b0cc6e
     }
     
     .site-logo img {
