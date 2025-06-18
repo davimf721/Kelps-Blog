@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 require_once '../includes/db_connect.php';
 require_once '../includes/auth.php';
@@ -10,6 +9,13 @@ if (!is_logged_in() || !is_admin()) {
     header("Location: ../index.php");
     exit();
 }
+
+// Definir variáveis para o header
+$page_title = "Painel de Administração - Kelps Blog";
+$current_page = 'admin';
+
+// Incluir o header padrão
+include '../includes/header.php';
 
 // Estatísticas do site
 $stats = [
@@ -29,29 +35,8 @@ if ($comments_query) $stats['comments'] = pg_fetch_result($comments_query, 0, 0)
 // Buscar todos os usuários com informação de banimento
 $users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT 10");
 ?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Administração - Kelps Blog</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .admin-header {
-            background-color: #212121;
-            color: #fff;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-        
-        .admin-header h1 {
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+
+<div class="admin-container"
         
         .admin-container {
             max-width: 1200px;
@@ -317,10 +302,205 @@ $users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, is_bann
                 </table>
             </section>
         </div>
-    </main>
 
-    <footer>
-        <p>&copy; <?php echo date("Y"); ?> Kelps Blog. Todos os direitos reservados.</p>
-    </footer>
-</body>
-</html>
+<?php include '../includes/footer.php'; ?>
+
+<style>
+/* Estilos específicos para o painel admin */
+.admin-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 30px;
+    background-color: #3a3a3a;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.admin-header {
+    background-color: #212121;
+    color: #fff;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.admin-header h1 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 2rem;
+    color: #fff;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #0e86ca, #4ecdc4);
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(14, 134, 202, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(14, 134, 202, 0.4);
+}
+
+.stat-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.stat-card .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.admin-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-section h2 {
+    color: #fff;
+    margin: 0 0 20px 0;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-table {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.admin-table th {
+    background: rgba(0, 0, 0, 0.3);
+    font-weight: 600;
+    color: #0e86ca;
+}
+
+.admin-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-right: 8px;
+}
+
+.ban-link {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.ban-link:hover {
+    background: rgba(220, 53, 69, 0.3);
+    border-color: #dc3545;
+}
+
+.unban-link {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.unban-link:hover {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: #28a745;
+}
+
+.admin-link {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.admin-link:hover {
+    background: rgba(255, 193, 7, 0.3);
+    border-color: #ffc107;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-admin {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.badge-banned {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        margin: 15px;
+        padding: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .admin-table {
+        font-size: 0.9rem;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 10px;
+    }
+    
+    .admin-action-link {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        margin-bottom: 5px;
+        display: block;
+        text-align: center;
+    }
+}
+</style>
