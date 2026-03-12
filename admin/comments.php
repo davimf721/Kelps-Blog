@@ -16,7 +16,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
     $comment_id = (int)$_GET['id'];
     
     // Excluir comentário
-    $delete_comment = pg_query($dbconn, "DELETE FROM comments WHERE id = $comment_id");
+    $delete_comment = pg_query_params($dbconn, "DELETE FROM comments WHERE id = $1", [$comment_id]);
     
     if ($delete_comment) {
         $_SESSION['admin_success'] = "Comentário excluído com sucesso.";
@@ -35,7 +35,7 @@ if (isset($_GET['delete_comment']) && is_numeric($_GET['delete_comment'])) {
     $post_id = isset($_GET['post_id']) ? (int)$_GET['post_id'] : null;
     
     // Excluir comentário
-    $delete_comment = pg_query($dbconn, "DELETE FROM comments WHERE id = $comment_id");
+    $delete_comment = pg_query_params($dbconn, "DELETE FROM comments WHERE id = $1", [$comment_id]);
     
     if ($delete_comment) {
         $_SESSION['admin_success'] = "Comentário excluído com sucesso.";

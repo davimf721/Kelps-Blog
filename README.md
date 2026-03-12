@@ -1,44 +1,131 @@
 # Kelps Blog
 
+Uma rede social/blog moderna desenvolvida em PHP e PostgreSQL.
+
 ## Visão Geral
-Kelps Blog é uma plataforma moderna de blog desenvolvida em PHP e PostgreSQL, que permite aos usuários criar, editar e gerenciar conteúdo com suporte completo a Markdown. O sistema oferece uma interface elegante e responsiva, projetada para uma experiência de escrita e leitura agradável.
+
+Kelps Blog é uma plataforma de blog e rede social que permite aos usuários criar posts, seguir outros usuários, comentar e interagir através de upvotes. O sistema oferece uma interface elegante e responsiva com suporte completo a Markdown.
+
+## Estrutura do Projeto
+
+```
+kelps-blog/
+├── app/                        # Código principal da aplicação
+│   ├── bootstrap.php           # Inicialização centralizada
+│   ├── config/                 # Configurações (database, app)
+│   ├── helpers/                # Funções auxiliares
+│   │   ├── auth.php            # Autenticação
+│   │   ├── db.php              # Conexão banco de dados
+│   │   ├── notifications.php   # Sistema de notificações
+│   │   └── EmailSender.php     # Envio de emails
+│   ├── security/               # Classes de segurança
+│   │   ├── Csrf.php            # Proteção CSRF
+│   │   ├── InputSanitizer.php  # Sanitização de entrada
+│   │   ├── RateLimiter.php     # Limitação de requisições
+│   │   └── SessionManager.php  # Gerenciamento de sessão
+│   └── views/partials/         # Templates reutilizáveis
+│       ├── header.php
+│       └── footer.php
+│
+├── pages/                      # Páginas organizadas por contexto
+│   ├── auth/                   # Login, registro, logout
+│   ├── posts/                  # Criar, editar, excluir posts
+│   ├── profile/                # Perfil e notificações
+│   ├── account/                # Gerenciamento de conta
+│   └── api/                    # Endpoints JSON (AJAX)
+│
+├── admin/                      # Painel administrativo
+│   ├── dashboard.php
+│   ├── users.php
+│   ├── posts.php
+│   └── comments.php
+│
+├── public/                     # Assets públicos
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── database/                   # Banco de dados
+│   ├── schema.sql              # Schema completo
+│   └── migrations/             # Migrations incrementais
+│
+├── storage/                    # Arquivos gerados (não versionados)
+│   ├── uploads/
+│   ├── logs/
+│   └── cache/
+│
+├── docs/                       # Documentação
+├── vendor/                     # Dependências (Composer)
+│
+├── includes/                   # [Compatibilidade] Proxies
+├── config/                     # [Compatibilidade] Proxies
+│
+└── *.php (raiz)                # Redirecionadores para pages/
+```
 
 ## Funcionalidades
 
-### Gerenciamento de Conteúdo
-- **Editor Markdown completo** com pré-visualização em tempo real
-- **Barra de ferramentas de formatação** para fácil inserção de elementos Markdown
-- **Upload e gerenciamento de imagens** integrado aos posts
-- **Pré-visualização** do resultado final antes da publicação
-- **Tags e categorias** para melhor organização do conteúdo
-- **Edição e exclusão** de posts pelo autor
+### Usuários
+- Registro e autenticação segura
+- Perfis personalizáveis com foto e bio
+- Sistema de seguir/deixar de seguir
+- Notificações em tempo real
 
-### Sistema de Usuários
-- **Registro e autenticação** de usuários
-- **Perfis personalizáveis** com informações do autor
-- **Níveis de permissão** (administrador, autor, leitor)
-- **Proteção contra ataques** de injeção SQL e XSS
+### Posts
+- Editor Markdown com preview
+- Upvotes e comentários
+- Feed personalizado
 
-### Interface e Design
-- **Design responsivo** adaptável a dispositivos móveis e desktop
-- **Tema escuro** para melhor experiência de leitura
-- **Layout customizável** através de CSS
-- **Suporte para múltiplos idiomas**
+### Segurança
+- Proteção contra SQL Injection (prepared statements)
+- Proteção CSRF
+- Sanitização de entrada
+- Rate limiting
+- Sessões seguras
 
-### Recursos Técnicos
-- **Rotas amigáveis** para melhor SEO
-- **Armazenamento eficiente** de conteúdo no PostgreSQL
-- **Compatibilidade com PHP 7.4+**
-- **Validação de formulários** no lado cliente e servidor
-- **Notificações em tempo real** para feedback do usuário
+## Requisitos
 
-## Primeiro Acesso
+- PHP 8.0+
+- PostgreSQL 13+
+- Composer
 
-1. Acesse o blog através do navegador
-2. Vá para a página de registro
-3. Crie uma conta de administrador
-4. Faça login com suas credenciais
-5. Comece a criar conteúdo!
+## Instalação
+
+```bash
+# Clonar repositório
+git clone https://github.com/seu-usuario/kelps-blog.git
+
+# Instalar dependências
+composer install
+
+# Configurar ambiente
+cp .env.example .env
+# Editar .env com suas configurações
+
+# Criar banco de dados
+psql -U postgres -f database/schema.sql
+
+# Acessar no navegador
+# http://localhost/kelps-blog
+```
+
+## Configuração
+
+### Variáveis de Ambiente (.env)
+
+```env
+APP_ENV=development
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=kelps_blog
+DB_USER=postgres
+DB_PASS=sua_senha
+```
+
+### Railway
+
+O projeto está configurado para deploy no Railway. As variáveis de ambiente são detectadas automaticamente.
 
 ## Utilização do Editor Markdown
 

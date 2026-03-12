@@ -16,7 +16,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_ban' && isset($_GET['id
     $user_id = (int)$_GET['id'];
     
     // Verificar se o usuário existe e não é admin
-    $check_user = pg_query($dbconn, "SELECT is_admin, is_banned FROM users WHERE id = $user_id");
+    $check_user = pg_query_params($dbconn, "SELECT is_admin, is_banned FROM users WHERE id = $1", [$user_id]);
     if ($check_user && pg_num_rows($check_user) > 0) {
         $user = pg_fetch_assoc($check_user);
         
@@ -24,8 +24,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_ban' && isset($_GET['id
         if ($user['is_admin'] == 't') {
             $_SESSION['admin_error'] = "Não é possível banir um administrador.";
         } else {
-            $new_status = ($user['is_banned'] == 't') ? 'FALSE' : 'TRUE';
-            $update = pg_query($dbconn, "UPDATE users SET is_banned = $new_status WHERE id = $user_id");
+            $new_status = ($user['is_banned'] == 't') ? false : true;
+            $update = pg_query_params($dbconn, "UPDATE users SET is_banned = $1 WHERE id = $2", [$new_status ? 't' : 'f', $user_id]);
             
             if ($update) {
                 $_SESSION['admin_success'] = "Status do usuário atualizado com sucesso.";
