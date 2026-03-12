@@ -1,5 +1,61 @@
+# ============================================
+# Arquivos específicos do projeto
+# ============================================
 backup.sql
 GrupoHTML_ProjetoFinal_Etapa 1.pdf
-.env
 fix_post.php
 fix_banned_users.php
+
+# ============================================
+# Ambiente e Configurações
+# ============================================
+.env
+.env.local
+.env.*.local
+*.env
+
+# ============================================
+# Logs e Cache
+# ============================================
+storage/logs/*
+!storage/logs/.gitkeep
+storage/cache/*
+!storage/cache/.gitkeep
+storage/uploads/*
+!storage/uploads/.gitkeep
+*.log
+
+# ============================================
+# Dependências
+# ============================================
+/vendor/
+node_modules/
+package-lock.json
+
+# ============================================
+# IDE e Editor
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Testes
+# ============================================
+.phpunit.result.cache
+coverage/
+.coverage
+
+# ============================================
+# Arquivos sensíveis (NUNCA commitar!)
+# ============================================
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json
+make_admin.php

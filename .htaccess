@@ -1,0 +1,164 @@
+# ============================================
+# Segurança - Bloquear acesso a arquivos sensíveis
+# ============================================
+
+# Bloquear arquivos de setup e admin perigosos
+<FilesMatch "^(setup_|make_admin|database)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Bloquear arquivos de configuração e dados
+<FilesMatch "\.(env|sql|md|json|lock|log|yml|yaml)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Bloquear acesso a arquivos ocultos
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ============================================
+# Bloquear diretórios sensíveis
+# ============================================
+
+# Bloquear acesso direto a pastas
+<DirectoryMatch "^/.+/(config|storage|src|database|docs|tests|bin|vendor)/">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# ============================================
+# Headers de Segurança
+# ============================================
+
+<IfModule mod_headers.c>
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "DENY"
+    
+    # Habilitar XSS filter do browser
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Controlar referrer
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Remover header de versão do PHP
+    Header always unset X-Powered-By
+    
+    # HSTS - Forçar HTTPS (descomentar em produção com HTTPS)
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# ============================================
+# Configurações do PHP
+# ============================================
+
+<IfModule mod_php.c>
+    # Desabilitar exibição de erros
+    php_flag display_errors Off
+    php_flag log_errors On
+    
+    # Aumentar segurança de sessões
+    php_value session.cookie_httponly 1
+    php_value session.use_only_cookies 1
+    php_value session.cookie_samesite Strict
+</IfModule>
+
+# ============================================
+# Compressão
+# ============================================
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# ============================================
+# Cache de assets estáticos
+# ============================================
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Imagens
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS e JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    
+    # Fontes
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# ============================================
+# Prevenção de directory listing
+# ============================================
+
+Options -Indexes
+
+# ============================================
+# Rewrite - URLs para nova estrutura
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Redirecionar para HTTPS (descomentar em produção)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Se o arquivo existe, servir diretamente
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+    
+    # Se o diretório existe, servir diretamente
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Auth pages
+    RewriteRule ^login\.php$ pages/auth/login.php [L]
+    RewriteRule ^register\.php$ pages/auth/register.php [L]
+    RewriteRule ^logout\.php$ pages/auth/logout.php [L]
+    RewriteRule ^forgot_password\.php$ pages/auth/forgot_password.php [L]
+    RewriteRule ^reset_password\.php$ pages/auth/reset_password.php [L]
+    RewriteRule ^banned\.php$ pages/auth/banned.php [L]
+    
+    # Posts pages
+    RewriteRule ^post\.php$ pages/posts/post.php [L]
+    RewriteRule ^create_post\.php$ pages/posts/create_post.php [L]
+    RewriteRule ^edit_post\.php$ pages/posts/edit_post.php [L]
+    RewriteRule ^delete_post\.php$ pages/posts/delete_post.php [L]
+    RewriteRule ^add_comment\.php$ pages/posts/add_comment.php [L]
+    RewriteRule ^delete_comment\.php$ pages/posts/delete_comment.php [L]
+    RewriteRule ^markdown_preview\.php$ pages/posts/markdown_preview.php [L]
+    
+    # Profile pages
+    RewriteRule ^profile\.php$ pages/profile/profile.php [L]
+    RewriteRule ^edit_profile\.php$ pages/profile/edit_profile.php [L]
+    RewriteRule ^notifications\.php$ pages/profile/notifications.php [L]
+    
+    # Account pages
+    RewriteRule ^delete_account\.php$ pages/account/delete_account.php [L]
+    RewriteRule ^delete_account_confirmation\.php$ pages/account/delete_account_confirmation.php [L]
+    
+    # API endpoints
+    RewriteRule ^fetch_posts\.php$ pages/api/fetch_posts.php [L]
+    RewriteRule ^fetch_comments\.php$ pages/api/fetch_comments.php [L]
+    RewriteRule ^fetch_upvotes\.php$ pages/api/fetch_upvotes.php [L]
+    RewriteRule ^upvote_post\.php$ pages/api/upvote_post.php [L]
+    RewriteRule ^follow_handler\.php$ pages/api/follow_handler.php [L]
+    RewriteRule ^mark_notifications_read\.php$ pages/api/mark_notifications_read.php [L]
+    RewriteRule ^delete_notification\.php$ pages/api/delete_notification.php [L]
+</IfModule>

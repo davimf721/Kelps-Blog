@@ -16,16 +16,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
     $post_id = (int)$_GET['id'];
     
     // Primeiro, excluir upvotes relacionados ao post
-    $delete_upvotes = pg_query($dbconn, "DELETE FROM post_upvotes WHERE post_id = $post_id");
+    $delete_upvotes = pg_query_params($dbconn, "DELETE FROM post_upvotes WHERE post_id = $1", [$post_id]);
     
     // Depois, excluir comentários relacionados ao post
-    $delete_comments = pg_query($dbconn, "DELETE FROM comments WHERE post_id = $post_id");
+    $delete_comments = pg_query_params($dbconn, "DELETE FROM comments WHERE post_id = $1", [$post_id]);
     
     // Excluir notificações relacionadas ao post
-    $delete_notifications = pg_query($dbconn, "DELETE FROM notifications WHERE reference_id = $post_id AND type IN ('new_post', 'upvote', 'comment')");
+    $delete_notifications = pg_query_params($dbconn, "DELETE FROM notifications WHERE reference_id = $1 AND type IN ('new_post', 'upvote', 'comment')", [$post_id]);
     
     // Finalmente, excluir o post
-    $delete_post = pg_query($dbconn, "DELETE FROM posts WHERE id = $post_id");
+    $delete_post = pg_query_params($dbconn, "DELETE FROM posts WHERE id = $1", [$post_id]);
     
     if ($delete_post) {
         $_SESSION['admin_success'] = "Post excluído com sucesso.";
@@ -43,16 +43,16 @@ if (isset($_GET['delete_post']) && is_numeric($_GET['delete_post'])) {
     $post_id = (int)$_GET['delete_post'];
     
     // Primeiro, excluir upvotes relacionados ao post
-    $delete_upvotes = pg_query($dbconn, "DELETE FROM post_upvotes WHERE post_id = $post_id");
+    $delete_upvotes = pg_query_params($dbconn, "DELETE FROM post_upvotes WHERE post_id = $1", [$post_id]);
     
     // Depois, excluir comentários relacionados ao post
-    $delete_comments = pg_query($dbconn, "DELETE FROM comments WHERE post_id = $post_id");
+    $delete_comments = pg_query_params($dbconn, "DELETE FROM comments WHERE post_id = $1", [$post_id]);
     
     // Excluir notificações relacionadas ao post
-    $delete_notifications = pg_query($dbconn, "DELETE FROM notifications WHERE reference_id = $post_id AND type IN ('new_post', 'upvote', 'comment')");
+    $delete_notifications = pg_query_params($dbconn, "DELETE FROM notifications WHERE reference_id = $1 AND type IN ('new_post', 'upvote', 'comment')", [$post_id]);
     
     // Finalmente, excluir o post
-    $delete_post = pg_query($dbconn, "DELETE FROM posts WHERE id = $post_id");
+    $delete_post = pg_query_params($dbconn, "DELETE FROM posts WHERE id = $1", [$post_id]);
     
     if ($delete_post) {
         $_SESSION['admin_success'] = "Post excluído com sucesso.";
