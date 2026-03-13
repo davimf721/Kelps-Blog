@@ -507,11 +507,16 @@ document.addEventListener('DOMContentLoaded', function() {
                              `\n📤 Enviando imagem "${file.name}"...\n` +
                              originalValue.substring(insertPos);
 
-            fetch('upload_image.php', {
+            fetch('/pages/api/upload_image.php', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     // Remover mensagem de envio e inserir markdown
@@ -540,8 +545,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao processar a imagem');
+                console.error('Erro no upload:', error);
+                alert('❌ Erro ao processar a imagem:\n' + error.message);
                 textarea.value = originalValue;
             });
         }
