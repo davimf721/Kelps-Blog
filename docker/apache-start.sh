@@ -18,6 +18,9 @@ cat > /etc/apache2/conf-available/block-sensitive-dirs.conf << 'EOF'
 <Directory /var/www/html/storage>
     Deny from all
 </Directory>
+<Directory /var/www/html/storage/uploads>
+    Allow from all
+</Directory>
 <Directory /var/www/html/vendor>
     Deny from all
 </Directory>
