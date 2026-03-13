@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+.env.*
+storage/logs/*
+storage/cache/*
+storage/uploads/*
+node_modules
+vendor
+*.log
