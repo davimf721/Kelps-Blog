@@ -21,16 +21,6 @@
 </FilesMatch>
 
 # ============================================
-# Bloquear diretórios sensíveis
-# ============================================
-
-# Bloquear acesso direto a pastas
-<DirectoryMatch "^/.+/(config|storage|src|database|docs|tests|bin|vendor)/">
-    Order allow,deny
-    Deny from all
-</DirectoryMatch>
-
-# ============================================
 # Headers de Segurança
 # ============================================
 

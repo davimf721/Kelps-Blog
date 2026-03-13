@@ -13,6 +13,29 @@ sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${APP_PORT}>/" /etc/apache2/si
 printf 'ServerName localhost\n' > /etc/apache2/conf-available/servername.conf
 a2enconf servername >/dev/null
 
+# Create configuration to block sensitive directories
+cat > /etc/apache2/conf-available/block-sensitive-dirs.conf << 'EOF'
+<Directory /var/www/html/config>
+    Deny from all
+</Directory>
+<Directory /var/www/html/storage>
+    Deny from all
+</Directory>
+<Directory /var/www/html/database>
+    Deny from all
+</Directory>
+<Directory /var/www/html/docs>
+    Deny from all
+</Directory>
+<Directory /var/www/html/vendor>
+    Deny from all
+</Directory>
+<Directory /var/www/html/app>
+    Deny from all
+</Directory>
+EOF
+a2enconf block-sensitive-dirs >/dev/null
+
 echo "[startup] Apache MPM symlinks:"
 ls -1 /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true
 echo "[startup] Apache loaded MPM modules:"
