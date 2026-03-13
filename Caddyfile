@@ -1,0 +1,13 @@
+{
+    auto_https off
+    admin off
+}
+
+:{$PORT} {
+    root * /app
+    encode zstd gzip
+
+    php_server {
+        root /app
+    }
+}
