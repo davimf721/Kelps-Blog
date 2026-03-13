@@ -15,24 +15,15 @@ a2enconf servername >/dev/null
 
 # Create configuration to block sensitive directories
 cat > /etc/apache2/conf-available/block-sensitive-dirs.conf << 'EOF'
-<Directory /var/www/html/config>
-    Deny from all
-</Directory>
 <Directory /var/www/html/storage>
-    Deny from all
-</Directory>
-<Directory /var/www/html/database>
-    Deny from all
-</Directory>
-<Directory /var/www/html/docs>
     Deny from all
 </Directory>
 <Directory /var/www/html/vendor>
     Deny from all
 </Directory>
-<Directory /var/www/html/app>
+<FilesMatch "^(bootstrap|config)\.php$">
     Deny from all
-</Directory>
+</FilesMatch>
 EOF
 a2enconf block-sensitive-dirs >/dev/null
 
