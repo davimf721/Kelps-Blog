@@ -77,12 +77,13 @@ try {
     foreach ($sensitive_files as $file) {
         $real_path = realpath($file);
         if (file_exists($file)) {
-            // Verifica se o arquivo tem permissões de leitura amplas
+            // Verifica se o arquivo tem permissões muito abertas (>0664)
             $perms = fileperms($file);
             $perm_string = substr(sprintf('%o', $perms), -4);
             
-            // 644 é perigoso, 640 é melhor, 600 é ideal
-            if ($perm_string[2] !== '0' && $perm_string[3] !== '0') {
+            // Alerta apenas se "others" (último dígito) podem escrever (6 ou 7)
+            $last_digit = (int)$perm_string[3];
+            if ($last_digit >= 6) {  // 6 ou 7 = leitura e escrita para others
                 $exposed_files[] = basename($file) . " (perms: $perm_string)";
             }
         }
