@@ -534,18 +534,20 @@ $json_top_users = json_encode(array_values($top_users));
 .users-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.9em;
 }
 
 .users-table th {
     background-color: #1a1a1a;
-    padding: 12px;
+    padding: 8px 10px;
     text-align: left;
     border-bottom: 2px solid #444;
     color: #999;
+    font-size: 0.85em;
 }
 
 .users-table td {
-    padding: 12px;
+    padding: 8px 10px;
     border-bottom: 1px solid #444;
 }
 
@@ -579,18 +581,19 @@ $json_top_users = json_encode(array_values($top_users));
 
 .action-buttons {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
 .action-btn {
-    padding: 6px 12px;
-    font-size: 0.85em;
+    padding: 4px 8px;
+    font-size: 0.75em;
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .btn-ban {
@@ -639,12 +642,12 @@ $json_top_users = json_encode(array_values($top_users));
 }
 
 .content-preview {
-    max-width: 300px;
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #ccc;
-    font-size: 0.9em;
+    font-size: 0.85em;
 }
 
 .success-message {
