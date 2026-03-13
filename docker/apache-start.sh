@@ -7,9 +7,16 @@ rm -f /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_wo
 ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load
 ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf
 
+APP_PORT="${PORT:-8080}"
+sed -ri "s/^Listen [0-9]+$/Listen ${APP_PORT}/" /etc/apache2/ports.conf
+sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${APP_PORT}>/" /etc/apache2/sites-available/000-default.conf
+printf 'ServerName localhost\n' > /etc/apache2/conf-available/servername.conf
+a2enconf servername >/dev/null
+
 echo "[startup] Apache MPM symlinks:"
 ls -1 /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true
 echo "[startup] Apache loaded MPM modules:"
 apache2ctl -M 2>/dev/null | grep -E 'mpm_(event|worker|prefork)_module' || true
+echo "[startup] Apache listen port: ${APP_PORT}"
 
 exec apache2-foreground
