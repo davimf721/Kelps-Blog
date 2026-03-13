@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["php82", "php82Extensions.pgsql", "php82Extensions.gd", "php82Extensions.mbstring", "php82Extensions.curl", "nginx"]
+
+[start]
+cmd = "php-fpm -d upload_max_filesize=10M -d post_max_size=10M -d memory_limit=128M & nginx -c /app/nginx.conf -g 'daemon off;'"
