@@ -1,6 +1,11 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
 require_once __DIR__ . '/../../includes/db_connect.php';
 require_once __DIR__ . '/../../libs/Parsedown.php';
+
+header('Content-Type: application/json; charset=utf-8');
 
 // Inicializar Parsedown para renderizar markdown
 $parsedown = new Parsedown();
@@ -74,7 +79,14 @@ if ($result) {
         
         $posts[] = $post;
     }
+    pg_free_result($result);
+} else {
+    // Erro na query
+    error_log("Erro ao buscar posts: " . pg_last_error($dbconn));
 }
 
-header('Content-Type: application/json');
-echo json_encode($posts);
+if (empty($posts)) {
+    echo json_encode([], JSON_UNESCAPED_UNICODE);
+} else {
+    echo json_encode($posts, JSON_UNESCAPED_UNICODE);
+}
