@@ -22,8 +22,10 @@ if (!is_logged_in() || !is_admin()) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? null;
     $user_id = (int)($_POST['user_id'] ?? 0);
+    $post_id = (int)($_POST['post_id'] ?? 0);
+    $comment_id = (int)($_POST['comment_id'] ?? 0);
     
-    if ($action && $user_id > 0) {
+    if ($action) {
         try {
             switch ($action) {
                 case 'ban_user':
@@ -55,12 +57,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
                     
                 case 'demote_admin':
-                    if ($user_id != $_SESSION['user_id']) {
+                    if ($user_id > 0 && $user_id != $_SESSION['user_id']) {
                         $result = pg_query_params($dbconn, 
                             "UPDATE users SET is_admin = false WHERE id = $1", 
                             [$user_id]
                         );
                         $_SESSION['success'] = $result ? "Admin removido com sucesso!" : "Erro ao remover admin.";
+                    }
+                    break;
+                    
+                case 'delete_post':
+                    if ($post_id > 0) {
+                        // Primeiro deleta comentários associados
+                        pg_query_params($dbconn, "DELETE FROM comments WHERE post_id = $1", [$post_id]);
+                        // Depois deleta upvotes
+                        pg_query_params($dbconn, "DELETE FROM post_upvotes WHERE post_id = $1", [$post_id]);
+                        // Finalmente deleta o post
+                        $result = pg_query_params($dbconn, "DELETE FROM posts WHERE id = $1", [$post_id]);
+                        $_SESSION['success'] = $result ? "Post deletado com sucesso!" : "Erro ao deletar post.";
+                    }
+                    break;
+                    
+                case 'delete_comment':
+                    if ($comment_id > 0) {
+                        $result = pg_query_params($dbconn, "DELETE FROM comments WHERE id = $1", [$comment_id]);
+                        $_SESSION['success'] = $result ? "Comentário deletado com sucesso!" : "Erro ao deletar comentário.";
                     }
                     break;
             }
@@ -127,28 +148,62 @@ foreach ($queries as $key => $query) {
 
 // =============== DADOS PARA GRÁFICOS ===============
 
-// Posts por semana
-$posts_by_week = [];
+// ===== POSTS POR SEMANA (últimas 8 semanas) =====
+// Gerar array com todas as 8 semanas explicitamente
+$posts_by_week_full = [];
+for ($i = 7; $i >= 0; $i--) {
+    $week_start = date('Y-m-d', strtotime("-$i weeks", strtotime("Monday this week")));
+    $week_end = date('Y-m-d', strtotime("+6 days", strtotime($week_start)));
+    $posts_by_week_full[$week_start] = [
+        'label' => date('d/m', strtotime($week_start)) . ' - ' . date('d/m', strtotime($week_end)),
+        'count' => 0
+    ];
+}
+
+// Query para pegar posts por semana
 $week_query = "SELECT 
-    DATE_TRUNC('week', created_at)::date as week,
+    DATE_TRUNC('week', created_at)::date as week_start,
     COUNT(*) as count
 FROM posts
 WHERE created_at >= CURRENT_DATE - INTERVAL '8 weeks'
 GROUP BY DATE_TRUNC('week', created_at)
-ORDER BY week";
+ORDER BY week_start";
+
 $week_result = safe_query($dbconn, $week_query);
+$week_data_map = [];
 if ($week_result) {
     while ($row = pg_fetch_assoc($week_result)) {
-        $posts_by_week[] = [
-            'week' => isset($row['week']) ? date('d/m', strtotime($row['week'])) : 'N/A',
-            'count' => isset($row['count']) ? (int)$row['count'] : 0
-        ];
+        if (isset($row['week_start'])) {
+            $week_start = date('Y-m-d', strtotime($row['week_start']));
+            $week_data_map[$week_start] = (int)$row['count'];
+        }
     }
     pg_free_result($week_result);
 }
 
-// Atividade de usuários (últimos 7 dias)
-$users_activity = [];
+// Merge dos dados com semanas vazias preenchidas
+$posts_by_week = [];
+foreach ($posts_by_week_full as $week_start => $week_data) {
+    $posts_by_week[] = [
+        'week' => $week_data['label'],
+        'count' => $week_data_map[$week_start] ?? 0
+    ];
+}
+
+// ===== ATIVIDADE DIÁRIA (últimos 7 dias) =====
+// Gerar array com todos os 7 dias
+$users_activity_full = [];
+$day_names = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $day_of_week = date('w', strtotime($date));
+    $users_activity_full[$date] = [
+        'label' => $day_names[$day_of_week] . ' ' . date('d/m', strtotime($date)),
+        'count' => 0
+    ];
+}
+
+// Query para atividade diária
 $activity_query = "SELECT 
     DATE(created_at) as date,
     COUNT(*) as count
@@ -156,15 +211,26 @@ FROM posts
 WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
 GROUP BY DATE(created_at)
 ORDER BY date";
+
 $activity_result = safe_query($dbconn, $activity_query);
+$activity_data_map = [];
 if ($activity_result) {
     while ($row = pg_fetch_assoc($activity_result)) {
-        $users_activity[] = [
-            'date' => isset($row['date']) ? date('d/m', strtotime($row['date'])) : 'N/A',
-            'count' => isset($row['count']) ? (int)$row['count'] : 0
-        ];
+        if (isset($row['date'])) {
+            $date = date('Y-m-d', strtotime($row['date']));
+            $activity_data_map[$date] = (int)$row['count'];
+        }
     }
     pg_free_result($activity_result);
+}
+
+// Merge dos dados com dias vazios preenchidos
+$users_activity = [];
+foreach ($users_activity_full as $date => $day_data) {
+    $users_activity[] = [
+        'date' => $day_data['label'],
+        'count' => $activity_data_map[$date] ?? 0
+    ];
 }
 
 // Top usuários por posts
@@ -226,6 +292,21 @@ if ($stats['total_users'] === 0) {
 // Listar usuários para gestão
 $users_query = "SELECT id, username, email, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT 50";
 $users_result = safe_query($dbconn, $users_query);
+
+// Listar posts recentes para moderação
+$posts_management_query = "SELECT p.id, p.title, p.content, u.username, p.created_at 
+FROM posts p 
+JOIN users u ON p.user_id = u.id 
+ORDER BY p.created_at DESC LIMIT 20";
+$posts_management_result = safe_query($dbconn, $posts_management_query);
+
+// Listar comentários recentes para moderação
+$comments_management_query = "SELECT c.id, c.content, u.username, p.title, c.created_at 
+FROM comments c 
+JOIN users u ON c.user_id = u.id 
+JOIN posts p ON c.post_id = p.id 
+ORDER BY c.created_at DESC LIMIT 20";
+$comments_management_result = safe_query($dbconn, $comments_management_query);
 
 $json_posts_by_week = json_encode(array_values($posts_by_week));
 $json_users_activity = json_encode(array_values($users_activity));
@@ -305,28 +386,93 @@ $json_top_users = json_encode(array_values($top_users));
 }
 
 .chart-container {
-    background: #2a2a2a;
+    background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
     border-radius: 8px;
-    padding: 20px;
+    padding: 25px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-container h2 {
-    margin-top: 0;
+    margin: 0 0 15px 0;
     color: #228be6;
-    font-size: 1.3em;
+    font-size: 1.2em;
+    border-bottom: 2px solid #444;
+    padding-bottom: 10px;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 280px;
+    flex-grow: 1;
 }
 
 .security-issues {
-    background: #2a2a2a;
+    background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
     border-radius: 8px;
-    padding: 20px;
+    padding: 25px;
     margin-bottom: 40px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .security-issues h2 {
     margin-top: 0;
+    margin-bottom: 20px;
     color: #228be6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.security-check-btn {
+    background-color: #228be6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.security-check-btn:hover {
+    background-color: #1c7ed6;
+    transform: translateY(-1px);
+}
+
+.security-check-btn:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #666;
+    border-top: 2px solid #228be6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.last-check {
+    font-size: 0.85em;
+    color: #999;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
 }
 
 .issue-item {
@@ -347,6 +493,18 @@ $json_top_users = json_encode(array_values($top_users));
 
 .issue-item.high {
     border-left-color: #ff8787;
+}
+
+.issue-item.success {
+    border-left-color: #51cf66;
+    background-color: rgba(81, 207, 102, 0.1);
+}
+
+.issue-item small {
+    display: block;
+    color: #666;
+    font-size: 0.8em;
+    margin-top: 5px;
 }
 
 .issue-item h4 {
@@ -471,6 +629,24 @@ $json_top_users = json_encode(array_values($top_users));
     background-color: #ffca3d;
 }
 
+.btn-delete {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #ff5252;
+}
+
+.content-preview {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc;
+    font-size: 0.9em;
+}
+
 .success-message {
     background-color: #51cf66;
     color: white;
@@ -555,42 +731,60 @@ $json_top_users = json_encode(array_values($top_users));
     <!-- GRÁFICOS -->
     <div class="charts-section">
         <div class="chart-container">
-            <h2>📈 Posts por Semana</h2>
-            <canvas id="postsChart" width="400" height="200"></canvas>
+            <h2>📈 Posts por Semana (últimas 8)</h2>
+            <p style="color: #999; margin: 0 0 15px 0; font-size: 0.9em;">Tendência de publicação semanal</p>
+            <div class="chart-wrapper">
+                <canvas id="postsChart"></canvas>
+            </div>
         </div>
 
         <div class="chart-container">
-            <h2>📊 Atividade Diária (7 dias)</h2>
-            <canvas id="activityChart" width="400" height="200"></canvas>
+            <h2>📊 Atividade Diária (últimos 7 dias)</h2>
+            <p style="color: #999; margin: 0 0 15px 0; font-size: 0.9em;">Posts criados por dia da semana</p>
+            <div class="chart-wrapper">
+                <canvas id="activityChart"></canvas>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>👑 Top 10 Usuários</h2>
-            <canvas id="topUsersChart" width="400" height="200"></canvas>
+            <p style="color: #999; margin: 0 0 15px 0; font-size: 0.9em;">Usuários mais ativos (por número de posts)</p>
+            <div class="chart-wrapper">
+                <canvas id="topUsersChart"></canvas>
+            </div>
         </div>
 
         <div class="chart-container">
             <h2>📊 Distribuição de Usuários</h2>
-            <canvas id="usersDistributionChart" width="400" height="200"></canvas>
+            <p style="color: #999; margin: 0 0 15px 0; font-size: 0.9em;">Status de contas no sistema</p>
+            <div class="chart-wrapper">
+                <canvas id="usersDistributionChart"></canvas>
+            </div>
         </div>
     </div>
 
     <!-- ANÁLISE DE SEGURANÇA -->
     <div class="security-issues">
-        <h2>🔒 Análise de Segurança & Saúde</h2>
-        <?php if (empty($security_issues)): ?>
-            <div class="issue-item low">
-                <h4>✅ Sistema em bom estado</h4>
-                <p>Nenhum problema de segurança detectado! Site bem configurado e seguro.</p>
-            </div>
-        <?php else: ?>
-            <?php foreach ($security_issues as $issue): ?>
-                <div class="issue-item <?php echo $issue['severity']; ?>">
-                    <h4><?php echo htmlspecialchars($issue['title']); ?></h4>
-                    <p><?php echo htmlspecialchars($issue['description']); ?></p>
+        <h2>
+            <span>🔒 Análise de Segurança & Saúde (Em Tempo Real)</span>
+            <button class="security-check-btn" id="securityCheckBtn" onclick="performSecurityCheck()">🔍 Verificar Agora</button>
+        </h2>
+        <div id="security-results">
+            <?php if (empty($security_issues)): ?>
+                <div class="issue-item low">
+                    <h4>✅ Sistema em bom estado</h4>
+                    <p>Nenhum problema de segurança detectado! Site bem configurado e seguro.</p>
                 </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+            <?php else: ?>
+                <?php foreach ($security_issues as $issue): ?>
+                    <div class="issue-item <?php echo $issue['severity']; ?>">
+                        <h4><?php echo htmlspecialchars($issue['title']); ?></h4>
+                        <p><?php echo htmlspecialchars($issue['description']); ?></p>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        <div class="last-check" id="lastCheckTime"></div>
     </div>
 
     <!-- GESTÃO DE USUÁRIOS -->
@@ -678,6 +872,98 @@ $json_top_users = json_encode(array_values($top_users));
             </table>
         <?php endif; ?>
     </div>
+
+    <!-- GESTÃO DE POSTS -->
+    <div class="users-section" style="margin-top: 40px;">
+        <h2>📝 Gestão de Posts</h2>
+        <?php if (!$posts_management_result): ?>
+            <p style="color: #999;">Erro ao carregar posts.</p>
+        <?php else: ?>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Conteúdo</th>
+                        <th>Data</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $post_count = 0;
+                    while ($post = pg_fetch_assoc($posts_management_result)): 
+                        $post_count++;
+                    ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($post['title']); ?></strong></td>
+                            <td><?php echo htmlspecialchars($post['username']); ?></td>
+                            <td><span class="content-preview"><?php echo htmlspecialchars($post['content']); ?></span></td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($post['created_at'])); ?></td>
+                            <td>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="delete_post">
+                                    <input type="hidden" name="post_id" value="<?php echo $post['id']; ?>">
+                                    <button type="submit" class="action-btn btn-delete" onclick="return confirm('Deletar este post? Esta ação é irreversível.\nTodos os comentários também serão removidos.');">🗑️ Deletar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    <?php if ($post_count === 0): ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #999;">Nenhum post encontrado</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    </div>
+
+    <!-- GESTÃO DE COMENTÁRIOS -->
+    <div class="users-section" style="margin-top: 40px;">
+        <h2>💬 Gestão de Comentários</h2>
+        <?php if (!$comments_management_result): ?>
+            <p style="color: #999;">Erro ao carregar comentários.</p>
+        <?php else: ?>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Autor</th>
+                        <th>Comentário</th>
+                        <th>Post</th>
+                        <th>Data</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $comment_count = 0;
+                    while ($comment = pg_fetch_assoc($comments_management_result)): 
+                        $comment_count++;
+                    ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($comment['username']); ?></td>
+                            <td><span class="content-preview"><?php echo htmlspecialchars($comment['content']); ?></span></td>
+                            <td><a href="../post.php?id=<?php echo htmlspecialchars($comment['title']); ?>" style="color: #228be6; text-decoration: none;"><?php echo htmlspecialchars($comment['title']); ?></a></td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($comment['created_at'])); ?></td>
+                            <td>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="delete_comment">
+                                    <input type="hidden" name="comment_id" value="<?php echo $comment['id']; ?>">
+                                    <button type="submit" class="action-btn btn-delete" onclick="return confirm('Deletar este comentário?');">🗑️ Deletar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    <?php if ($comment_count === 0): ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #999;">Nenhum comentário encontrado</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    </div>
 </div>
 
 <!-- Chart.js -->
@@ -686,23 +972,50 @@ $json_top_users = json_encode(array_values($top_users));
 const chartConfig = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+        intersect: false,
+        mode: 'index'
+    },
     plugins: {
         legend: {
-            display: false,
-            labels: { color: '#f1f1f1' }
+            display: true,
+            labels: { 
+                color: '#f1f1f1',
+                font: { size: 12 },
+                padding: 15
+            }
         },
         filler: {
             propagate: true
+        },
+        tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#f1f1f1',
+            borderColor: '#228be6',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true
         }
     },
     scales: {
         y: {
-            ticks: { color: '#999' },
-            grid: { color: '#333' }
+            beginAtZero: true,
+            ticks: { 
+                color: '#999',
+                stepSize: 1,
+                precision: 0
+            },
+            grid: { color: '#333', drawBorder: false },
+            title: {
+                display: true,
+                text: 'Quantidade',
+                color: '#999'
+            }
         },
         x: {
             ticks: { color: '#999' },
-            grid: { color: '#333' }
+            grid: { color: '#333', drawBorder: false }
         }
     }
 };
@@ -710,24 +1023,39 @@ const chartConfig = {
 // Posts por semana
 const ctx1 = document.getElementById('postsChart').getContext('2d');
 const postsData = <?php echo $json_posts_by_week; ?>;
+const postsMax = Math.max(...postsData.map(d => d.count), 5);
 new Chart(ctx1, {
     type: 'line',
     data: {
         labels: postsData.map(d => d.week),
         datasets: [{
-            label: 'Posts',
+            label: 'Número de Posts',
             data: postsData.map(d => d.count),
             borderColor: '#228be6',
-            backgroundColor: 'rgba(34, 139, 230, 0.2)',
+            backgroundColor: 'rgba(34, 139, 230, 0.15)',
             tension: 0.4,
             fill: true,
-            borderWidth: 2,
+            borderWidth: 3,
             pointBackgroundColor: '#228be6',
             pointBorderColor: '#fff',
-            pointBorderWidth: 2
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            segment: {
+                borderDash: d => d.x === undefined ? [5, 5] : undefined
+            }
         }]
     },
-    options: { ...chartConfig, maintainAspectRatio: true }
+    options: { 
+        ...chartConfig,
+        scales: {
+            ...chartConfig.scales,
+            y: {
+                ...chartConfig.scales.y,
+                max: Math.max(postsMax, 10)
+            }
+        }
+    }
 });
 
 // Atividade diária
@@ -740,12 +1068,26 @@ new Chart(ctx2, {
         datasets: [{
             label: 'Posts/Dia',
             data: activityData.map(d => d.count),
-            backgroundColor: '#51cf66',
-            borderColor: '#40c057',
-            borderWidth: 1
+            backgroundColor: [
+                '#51cf66', '#40c057', '#37b24d', '#2f9e44', '#2f8a4d', 
+                '#228be6', '#1c7ed6'
+            ],
+            borderColor: '#f1f1f1',
+            borderWidth: 1,
+            borderRadius: 6,
+            hoverBackgroundColor: '#ffd43b'
         }]
     },
-    options: { ...chartConfig, maintainAspectRatio: true }
+    options: { 
+        ...chartConfig,
+        scales: {
+            ...chartConfig.scales,
+            y: {
+                ...chartConfig.scales.y,
+                beginAtZero: true
+            }
+        }
+    }
 });
 
 // Top usuários
@@ -755,31 +1097,151 @@ const colors = ['#228be6', '#51cf66', '#ffd43b', '#ff8787', '#a78bfa', '#06b6d4'
 new Chart(ctx3, {
     type: 'doughnut',
     data: {
-        labels: topUsersData.map(d => d.username),
+        labels: topUsersData.map((d, i) => `${i+1}. ${d.username} (${d.post_count})`),
         datasets: [{
             data: topUsersData.map(d => d.post_count),
             backgroundColor: colors.slice(0, topUsersData.length),
             borderColor: '#2a2a2a',
-            borderWidth: 2
+            borderWidth: 2,
+            hoverOffset: 8
         }]
     },
-    options: { ...chartConfig, maintainAspectRatio: true }
+    options: { 
+        ...chartConfig,
+        plugins: {
+            ...chartConfig.plugins,
+            legend: {
+                display: true,
+                position: 'right',
+                labels: { 
+                    color: '#f1f1f1',
+                    font: { size: 11 },
+                    padding: 10
+                }
+            },
+            tooltip: {
+                ...chartConfig.plugins.tooltip,
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ' posts';
+                    }
+                }
+            }
+        }
+    }
 });
 
 // Distribuição de usuários
 const ctx4 = document.getElementById('usersDistributionChart').getContext('2d');
+const distData = [<?php echo $stats['active_users']; ?>, <?php echo $stats['banned_users']; ?>, <?php echo $stats['admin_users']; ?>];
 new Chart(ctx4, {
     type: 'doughnut',
     data: {
-        labels: ['Ativos', 'Banidos', 'Admins'],
+        labels: [
+            'Ativos (' + distData[0] + ')',
+            'Banidos (' + distData[1] + ')',
+            'Admins (' + distData[2] + ')'
+        ],
         datasets: [{
-            data: [<?php echo $stats['active_users']; ?>, <?php echo $stats['banned_users']; ?>, <?php echo $stats['admin_users']; ?>],
+            data: distData,
             backgroundColor: ['#51cf66', '#ff8787', '#228be6'],
             borderColor: '#2a2a2a',
-            borderWidth: 2
+            borderWidth: 2,
+            hoverOffset: 8
         }]
     },
-    options: { ...chartConfig, maintainAspectRatio: true }
+    options: { 
+        ...chartConfig,
+        plugins: {
+            ...chartConfig.plugins,
+            legend: {
+                display: true,
+                position: 'bottom',
+                labels: { 
+                    color: '#f1f1f1',
+                    font: { size: 12 },
+                    padding: 15
+                }
+            },
+            tooltip: {
+                ...chartConfig.plugins.tooltip,
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ' usuários';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// ============ VERIFICAÇÃO DE SEGURANÇA EM TEMPO REAL ============
+function performSecurityCheck() {
+    const btn = document.getElementById('securityCheckBtn');
+    const resultsDiv = document.getElementById('security-results');
+    const lastCheckDiv = document.getElementById('lastCheckTime');
+    
+    // Desabilita botão e mostra loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Verificando...';
+    
+    fetch('/pages/api/security_check.php', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        resultsDiv.innerHTML = '';
+        
+        if (data.success && data.issues) {
+            data.issues.forEach(issue => {
+                const issueDiv = document.createElement('div');
+                issueDiv.className = `issue-item ${issue.type === 'success' ? 'success' : issue.severity}`;
+                
+                const titleEl = document.createElement('h4');
+                titleEl.textContent = issue.title;
+                issueDiv.appendChild(titleEl);
+                
+                const descEl = document.createElement('p');
+                descEl.textContent = issue.description;
+                issueDiv.appendChild(descEl);
+                
+                const timeEl = document.createElement('small');
+                timeEl.textContent = '⏱️ ' + issue.timestamp;
+                issueDiv.appendChild(timeEl);
+                
+                resultsDiv.appendChild(issueDiv);
+            });
+            
+            // Atualiza última verificação
+            lastCheckDiv.innerHTML = `<strong>✓ Última verificação:</strong> ${data.last_check}`;
+            lastCheckDiv.style.color = '#51cf66';
+        } else {
+            resultsDiv.innerHTML = '<div class="issue-item high"><h4>❌ Erro na verificação</h4><p>Não foi possível realizar a verificação de segurança</p></div>';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        resultsDiv.innerHTML = `<div class="issue-item high"><h4>❌ Erro de comunicação</h4><p>${error.message}</p></div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Verificar Agora';
+    });
+}
+
+// Auto-verificar segurança a cada 5 minutos
+setInterval(() => {
+    console.log('Auto-verificação automática de segurança...');
+    performSecurityCheck();
+}, 5 * 60 * 1000);
+
+// Executar verificação inicial ao carregar a página
+window.addEventListener('load', () => {
+    setTimeout(() => performSecurityCheck(), 800);
 });
 </script>
 
