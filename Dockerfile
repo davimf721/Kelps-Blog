@@ -54,4 +54,9 @@ COPY --from=vendor /app/vendor /var/www/html/vendor
 RUN mkdir -p /var/www/html/storage/logs /var/www/html/storage/cache /var/www/html/storage/uploads \
     && chown -R www-data:www-data /var/www/html/storage
 
+# Runtime startup script to normalize Apache MPM state before launch.
+COPY docker/apache-start.sh /usr/local/bin/apache-start.sh
+RUN chmod +x /usr/local/bin/apache-start.sh
+
 EXPOSE 80
+CMD ["/usr/local/bin/apache-start.sh"]
