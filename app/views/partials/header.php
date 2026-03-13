@@ -83,6 +83,8 @@ if (strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta name="description" content="Kelps Blog - Compartilhe suas ideias e conhecimentos">
     <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/png" href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>images/favicon.ico">
+    <link rel="apple-touch-icon" href="<?php echo strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? '../' : ''; ?>images/logo.png">
 </head>
 <body class="<?php echo isset($current_page) ? 'page-' . $current_page : ''; ?>">
     <header>
