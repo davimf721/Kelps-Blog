@@ -46,12 +46,11 @@ $php_upload_limit = parse_size_to_bytes(ini_get('upload_max_filesize'));
 $php_post_limit = parse_size_to_bytes(ini_get('post_max_size'));
 $is_railway = !empty(getenv('RAILWAY_ENVIRONMENT')) || !empty(getenv('RAILWAY_PUBLIC_DOMAIN'));
 
-// MAX_REQUEST_BODY_SIZE pode ser definido como variável de ambiente no Railway
-// Com nginx.conf customizado (client_max_body_size 15M) o limite sobe para 15MB
+// MAX_REQUEST_BODY_SIZE pode ser definido via variável de ambiente no Railway
+// Sem proxy customizado, usa fallback do próprio limite de POST do PHP
 $proxy_request_limit = parse_size_to_bytes(getenv('MAX_REQUEST_BODY_SIZE') ?: '');
 if ($proxy_request_limit <= 0) {
-    // Assume o valor configurado no nginx.conf (15M) quando em Railway
-    $proxy_request_limit = $is_railway ? (15 * 1024 * 1024) : PHP_INT_MAX;
+    $proxy_request_limit = $php_post_limit > 0 ? $php_post_limit : PHP_INT_MAX;
 }
 
 $server_request_limit = min(
