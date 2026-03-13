@@ -126,7 +126,8 @@ include __DIR__ . '/../../includes/header.php';
                         <label for="content">Conteúdo:</label>
                         <span>Escrevendo Markdown</span>
                     </div>
-                    <textarea id="content" name="content" required><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
+                    <textarea id="content" name="content" required placeholder="Cole imagens aqui ou use a barra de ferramentas..."><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
+                    <div id="upload-hint" style="font-size: 0.85rem; color: #999; margin-top: 5px;">💡 Dica: Cole ou arraste imagens aqui para upload automático!</div>
                 </div>
                 
                 <div class="preview">
@@ -436,6 +437,114 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatePreview();
             });
         });
+        
+        // Funcionalidade de upload de imagens via drag-drop e paste
+        setupImageUpload(contentTextarea);
+    }
+    
+    function setupImageUpload(textarea) {
+        // Prevenir comportamento padrão do navegador
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            textarea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Event listeners para drag-drop
+        ['dragenter', 'dragover'].forEach(eventName => {
+            textarea.addEventListener(eventName, () => {
+                textarea.style.backgroundColor = '#3a3a3a';
+                textarea.style.borderColor = '#228be6';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            textarea.addEventListener(eventName, () => {
+                textarea.style.backgroundColor = '';
+                textarea.style.borderColor = '';
+            }, false);
+        });
+
+        // Função para processar imagens
+        function handleImages(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    uploadImage(file, textarea);
+                }
+            });
+        }
+
+        // Drop
+        textarea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleImages(files);
+        }, false);
+
+        // Paste
+        textarea.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            Array.from(items).forEach(item => {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    uploadImage(file, textarea);
+                }
+            });
+        }, false);
+
+        function uploadImage(file, textarea) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Mostrar feedback ao usuário
+            const originalValue = textarea.value;
+            const insertPos = textarea.selectionStart;
+            textarea.value = originalValue.substring(0, insertPos) + 
+                             `\n📤 Enviando imagem "${file.name}"...\n` +
+                             originalValue.substring(insertPos);
+
+            fetch('upload_image.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remover mensagem de envio e inserir markdown
+                    const content = textarea.value;
+                    const uploadingMsg = `\n📤 Enviando imagem "${file.name}"...\n`;
+                    const imageMarkdown = `![${file.name}](${data.url})`;
+                    
+                    try {
+                        const newContent = content.replace(uploadingMsg, '\n' + imageMarkdown + '\n');
+                        textarea.value = newContent;
+                    } catch(e) {
+                        // Fallback: apenas adicionar no final
+                        textarea.value = originalValue + '\n' + imageMarkdown;
+                    }
+                    
+                    // Atualizar preview
+                    const event = new Event('input', { bubbles: true });
+                    textarea.dispatchEvent(event);
+                } else {
+                    alert('Erro ao enviar imagem: ' + data.error);
+                    
+                    // Remover mensagem de erro e restaurar
+                    const content = textarea.value;
+                    const uploadingMsg = `\n📤 Enviando imagem "${file.name}"...\n`;
+                    textarea.value = originalValue;
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao processar a imagem');
+                textarea.value = originalValue;
+            });
+        }
     }
 });
 </script>
