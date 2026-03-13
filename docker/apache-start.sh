@@ -30,6 +30,14 @@ cat > /etc/apache2/conf-available/block-sensitive-dirs.conf << 'EOF'
 EOF
 a2enconf block-sensitive-dirs >/dev/null
 
+# Ensure upload directory exists and has proper permissions
+mkdir -p /var/www/html/storage/uploads
+chmod 755 /var/www/html/storage/uploads
+chown www-data:www-data /var/www/html/storage/uploads
+
+# Ensure PHP can write uploads
+chown -R www-data:www-data /var/www/html/storage/
+
 echo "[startup] Apache MPM symlinks:"
 ls -1 /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true
 echo "[startup] Apache loaded MPM modules:"
