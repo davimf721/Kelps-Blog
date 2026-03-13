@@ -58,5 +58,5 @@ RUN mkdir -p /var/www/html/storage/logs /var/www/html/storage/cache /var/www/htm
 COPY docker/apache-start.sh /usr/local/bin/apache-start.sh
 RUN chmod +x /usr/local/bin/apache-start.sh
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["/usr/local/bin/apache-start.sh"]
