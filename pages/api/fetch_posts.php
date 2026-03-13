@@ -26,7 +26,9 @@ if (isset($_SESSION['user_id'])) {
 
 $base_query .= " FROM posts p
                 JOIN users u ON p.user_id = u.id
-                ORDER BY p.created_at DESC";
+                WHERE p.id IS NOT NULL
+                ORDER BY p.created_at DESC
+                LIMIT 50";
 
 // Usar prepared statement se usuário logado
 if (isset($_SESSION['user_id'])) {

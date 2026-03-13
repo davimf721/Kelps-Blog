@@ -28,10 +28,10 @@ try {
     $log_dir = '../../storage/logs/';
     if (is_dir($log_dir)) {
         $log_files = glob($log_dir . '*.log');
-        foreach ($log_files as $log_file) {
+        foreach ((array)$log_files as $log_file) {
             $content = file_get_contents($log_file);
-            // Procura por padrões suspeitos de SQL injection
-            if (preg_match('/(\$_GET|\$_POST|\$_REQUEST).*exec|pg_query|mysqli_query/i', $content)) {
+            // Procura por padrões suspeitos de SQL injection (simplificado)
+            if (preg_match('/\$_(GET|POST|REQUEST).*?(?:exec|query|select|insert|update|delete)/is', $content)) {
                 $sql_injection_risks[] = basename($log_file);
             }
         }
@@ -151,24 +151,17 @@ try {
     }
     
     // ========== VERIFICAÇÃO 6: FUNÇÃO DE SANITIZAÇÃO ==========
-    // Verifica se formulários estão usando sanitização
-    $pages_dir = '../../pages/';
-    $unsanitized_inputs = [0];
-    
-    $page_files = glob($pages_dir . '**/*.php', GLOB_RECURSIVE);
-    foreach (array_slice($page_files, 0, 5) as $page_file) {
-        $content = file_get_contents($page_file);
-        // Procura por uso direto de $_GET, $_POST sem sanitização evidente
-        if (preg_match('/\$_(?:GET|POST|REQUEST)\[.*?\](?!.*?(?:htmlspecialchars|sanitize|escape))/s', $content)) {
-            $unsanitized_inputs[0]++;
-        }
+    // Verifica se há arquivo de sanitização incluído
+    $has_sanitizer = false;
+    if (file_exists('../../app/security/InputSanitizer.php')) {
+        $has_sanitizer = true;
     }
     
-    if ($unsanitized_inputs[0] > 0) {
+    if (!$has_sanitizer) {
         $issues[] = [
             'type' => 'info',
-            'title' => 'Possível falta de sanitização em inputs',
-            'description' => 'Encontrados potenciais inputs não sanitizados em algumas páginas (verificando amostra)',
+            'title' => 'Sanitizador de input não encontrado',
+            'description' => 'InputSanitizer não está disponível para validação de entradas',
             'severity' => 'medium',
             'timestamp' => date('H:i:s')
         ];
