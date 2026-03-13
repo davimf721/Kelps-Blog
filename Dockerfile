@@ -27,9 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" pgsql pdo_pgsql gd mbstring zip \
-    && a2dismod mpm_event mpm_worker || true \
-    && a2enmod mpm_prefork \
     && a2enmod rewrite headers expires deflate \
+    && test "$(apache2ctl -M 2>/dev/null | awk '/mpm_(event|worker|prefork)_module/ {count++} END {print count+0}')" -eq 1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Permite uso de .htaccess na pasta publica do Apache
