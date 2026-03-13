@@ -6,8 +6,76 @@ require_once __DIR__ . '/../../includes/auth.php';
 // Iniciar buffer de output
 ob_start();
 
-// Configurações de tamanho máximo
-$max_file_size = 5 * 1024 * 1024; // 5MB em bytes
+function parse_size_to_bytes($size) {
+    $size = trim((string)$size);
+    if ($size === '') {
+        return 0;
+    }
+
+    $unit = strtolower(substr($size, -1));
+    $value = (float)$size;
+
+    switch ($unit) {
+        case 'g':
+            $value *= 1024;
+        case 'm':
+            $value *= 1024;
+        case 'k':
+            $value *= 1024;
+            break;
+    }
+
+    return (int)$value;
+}
+
+function format_bytes_human($bytes) {
+    if ($bytes >= 1024 * 1024) {
+        return number_format($bytes / (1024 * 1024), 1, ',', '') . 'MB';
+    }
+
+    if ($bytes >= 1024) {
+        return number_format($bytes / 1024, 0, ',', '') . 'KB';
+    }
+
+    return $bytes . 'B';
+}
+
+// Configurações de limite de upload
+$app_file_limit = 5 * 1024 * 1024; // Limite funcional da aplicação por arquivo
+$php_upload_limit = parse_size_to_bytes(ini_get('upload_max_filesize'));
+$php_post_limit = parse_size_to_bytes(ini_get('post_max_size'));
+$is_railway = !empty(getenv('RAILWAY_ENVIRONMENT')) || !empty(getenv('RAILWAY_PUBLIC_DOMAIN'));
+
+// Em Railway/Nginx, se não houver variável explícita, assumir 1MB para evitar 413 antes do PHP
+$proxy_request_limit = parse_size_to_bytes(getenv('MAX_REQUEST_BODY_SIZE') ?: '');
+if ($proxy_request_limit <= 0) {
+    $proxy_request_limit = $is_railway ? (1024 * 1024) : PHP_INT_MAX;
+}
+
+$server_request_limit = min(
+    $php_post_limit > 0 ? $php_post_limit : PHP_INT_MAX,
+    $proxy_request_limit
+);
+
+$max_total_upload_size = $server_request_limit > 0 ? $server_request_limit : $app_file_limit;
+$max_file_size = min($app_file_limit, $max_total_upload_size);
+
+$max_file_size_text = format_bytes_human($max_file_size);
+$max_total_upload_size_text = format_bytes_human($max_total_upload_size);
+
+// Quando o body excede o limite, PHP recebe POST/FILES vazios
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' &&
+    empty($_POST) &&
+    empty($_FILES) &&
+    !empty($_SERVER['CONTENT_LENGTH']) &&
+    (int)$_SERVER['CONTENT_LENGTH'] > 0
+) {
+    $_SESSION['error'] = "O arquivo enviado excede o limite do servidor ({$max_total_upload_size_text}). Reduza o tamanho da imagem e tente novamente.";
+    header("Location: edit_profile.php");
+    exit();
+}
+
 $max_width = 1200;
 $max_height = 1200;
 
@@ -143,9 +211,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Upload da imagem de perfil
-    if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
-        if ($_FILES['profile_image']['size'] > $max_file_size) {
-            $errors[] = "A imagem de perfil é muito grande. Tamanho máximo: 5MB.";
+    if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] != UPLOAD_ERR_NO_FILE) {
+        if ($_FILES['profile_image']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['profile_image']['error'] === UPLOAD_ERR_FORM_SIZE) {
+            $errors[] = "A imagem de perfil excede o limite permitido pelo servidor ({$max_file_size_text}).";
+        } elseif ($_FILES['profile_image']['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = "Falha no upload da imagem de perfil. Tente novamente.";
+        } elseif ($_FILES['profile_image']['size'] > $max_file_size) {
+            $errors[] = "A imagem de perfil é muito grande. Tamanho máximo: {$max_file_size_text}.";
         } else {
             $allowed = array('jpg', 'jpeg', 'png', 'gif');
             $filename = $_FILES['profile_image']['name'];
@@ -172,9 +244,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Upload da imagem de banner
-    if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] == 0) {
-        if ($_FILES['banner_image']['size'] > $max_file_size) {
-            $errors[] = "A imagem de banner é muito grande. Tamanho máximo: 5MB.";
+    if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] != UPLOAD_ERR_NO_FILE) {
+        if ($_FILES['banner_image']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['banner_image']['error'] === UPLOAD_ERR_FORM_SIZE) {
+            $errors[] = "O banner excede o limite permitido pelo servidor ({$max_file_size_text}).";
+        } elseif ($_FILES['banner_image']['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = "Falha no upload do banner. Tente novamente.";
+        } elseif ($_FILES['banner_image']['size'] > $max_file_size) {
+            $errors[] = "A imagem de banner é muito grande. Tamanho máximo: {$max_file_size_text}.";
         } else {
             $allowed = array('jpg', 'jpeg', 'png', 'gif');
             $filename = $_FILES['banner_image']['name'];
@@ -380,6 +456,22 @@ $current_page = 'edit_profile';
 include __DIR__ . '/../../includes/header.php';
 ?>
 
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="upload-flash upload-flash-error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span><?php echo $_SESSION['error']; ?></span>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="upload-flash upload-flash-success">
+        <i class="fas fa-check-circle"></i>
+        <span><?php echo $_SESSION['success']; ?></span>
+    </div>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
 <div class="edit-profile-container">
     <div class="edit-profile-card">
         <div class="edit-profile-header">
@@ -429,7 +521,7 @@ include __DIR__ . '/../../includes/header.php';
                             </div>
                         </div>
                         <p class="input-hint" style="text-align: center; margin-top: 10px;">
-                            <i class="fas fa-info-circle"></i> Tamanho máximo: 5MB. Formatos: JPG, PNG, GIF
+                            <i class="fas fa-info-circle"></i> Limite por arquivo: <?php echo htmlspecialchars($max_file_size_text); ?>. Limite total por envio: <?php echo htmlspecialchars($max_total_upload_size_text); ?>. Formatos: JPG, PNG, GIF
                         </p>
                     </div>
                     
@@ -512,6 +604,29 @@ include __DIR__ . '/../../includes/header.php';
     .tab-content {
         display: none;
         padding: 20px 0;
+    }
+
+    .upload-flash {
+        max-width: 980px;
+        margin: 18px auto 0;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .upload-flash-error {
+        background: rgba(220, 53, 69, 0.12);
+        border: 1px solid rgba(220, 53, 69, 0.35);
+        color: #8e1420;
+    }
+
+    .upload-flash-success {
+        background: rgba(40, 167, 69, 0.12);
+        border: 1px solid rgba(40, 167, 69, 0.35);
+        color: #0f6b31;
     }
     
     .tab-content.active {
@@ -607,6 +722,9 @@ include __DIR__ . '/../../includes/header.php';
 </style>
 
 <script>
+    const MAX_FILE_SIZE_BYTES = <?php echo (int)$max_file_size; ?>;
+    const MAX_TOTAL_UPLOAD_BYTES = <?php echo (int)$max_total_upload_size; ?>;
+
     // Função para trocar de aba
     function openTab(tabName) {
         // Esconder todas as abas de conteúdo
@@ -630,7 +748,11 @@ include __DIR__ . '/../../includes/header.php';
     
     // Preview para imagem de perfil
     document.getElementById('profile_image').addEventListener('change', function(e) {
-        if (!checkFileSize(this, 5)) return;
+        if (!checkFileSize(this, MAX_FILE_SIZE_BYTES)) return;
+        if (!checkTotalUploadSize()) {
+            this.value = '';
+            return;
+        }
         
         const file = e.target.files[0];
         if (file) {
@@ -652,7 +774,11 @@ include __DIR__ . '/../../includes/header.php';
     
     // Preview para banner
     document.getElementById('banner_image').addEventListener('change', function(e) {
-        if (!checkFileSize(this, 5)) return;
+        if (!checkFileSize(this, MAX_FILE_SIZE_BYTES)) return;
+        if (!checkTotalUploadSize()) {
+            this.value = '';
+            return;
+        }
         
         const file = e.target.files[0];
         if (file) {
@@ -709,6 +835,11 @@ include __DIR__ . '/../../includes/header.php';
     
     // Verificar senhas
     document.getElementById('edit-profile-form').addEventListener('submit', function(e) {
+        if (!checkTotalUploadSize()) {
+            e.preventDefault();
+            return;
+        }
+
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
         const currentPassword = document.getElementById('current_password').value;
@@ -742,15 +873,29 @@ include __DIR__ . '/../../includes/header.php';
     });
     
     // Função para verificar o tamanho do arquivo
-    function checkFileSize(fileInput, maxSizeMB) {
-        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    function checkFileSize(fileInput, maxSizeBytes) {
         const file = fileInput.files[0];
         
         if (file && file.size > maxSizeBytes) {
+            const maxSizeMB = (maxSizeBytes / (1024 * 1024)).toFixed(1);
             alert(`A imagem é muito grande! Por favor, selecione uma imagem menor que ${maxSizeMB}MB.`);
             fileInput.value = ''; // Limpar o input
             return false;
         }
+        return true;
+    }
+
+    function checkTotalUploadSize() {
+        const profile = document.getElementById('profile_image').files[0];
+        const banner = document.getElementById('banner_image').files[0];
+        const total = (profile ? profile.size : 0) + (banner ? banner.size : 0);
+
+        if (total > MAX_TOTAL_UPLOAD_BYTES) {
+            const maxMB = (MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024)).toFixed(1);
+            alert(`O envio total excede o limite do servidor (${maxMB}MB). Escolha imagens menores.`);
+            return false;
+        }
+
         return true;
     }
 </script>
