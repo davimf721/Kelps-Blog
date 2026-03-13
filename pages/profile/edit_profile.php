@@ -41,15 +41,17 @@ function format_bytes_human($bytes) {
 }
 
 // Configurações de limite de upload
-$app_file_limit = 5 * 1024 * 1024; // Limite funcional da aplicação por arquivo
+$app_file_limit = 10 * 1024 * 1024; // Limite funcional da aplicação por arquivo (10MB)
 $php_upload_limit = parse_size_to_bytes(ini_get('upload_max_filesize'));
 $php_post_limit = parse_size_to_bytes(ini_get('post_max_size'));
 $is_railway = !empty(getenv('RAILWAY_ENVIRONMENT')) || !empty(getenv('RAILWAY_PUBLIC_DOMAIN'));
 
-// Em Railway/Nginx, se não houver variável explícita, assumir 1MB para evitar 413 antes do PHP
+// MAX_REQUEST_BODY_SIZE pode ser definido como variável de ambiente no Railway
+// Com nginx.conf customizado (client_max_body_size 15M) o limite sobe para 15MB
 $proxy_request_limit = parse_size_to_bytes(getenv('MAX_REQUEST_BODY_SIZE') ?: '');
 if ($proxy_request_limit <= 0) {
-    $proxy_request_limit = $is_railway ? (1024 * 1024) : PHP_INT_MAX;
+    // Assume o valor configurado no nginx.conf (15M) quando em Railway
+    $proxy_request_limit = $is_railway ? (15 * 1024 * 1024) : PHP_INT_MAX;
 }
 
 $server_request_limit = min(
