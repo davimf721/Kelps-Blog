@@ -1,7 +1,15 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
 session_start();
 require_once '../includes/db_connect.php';
 require_once '../includes/auth.php';
+
+// Verificar conexão com banco
+if (!isset($dbconn) || !$dbconn) {
+    die("Erro de conexão com banco de dados");
+}
 
 // Verificar se o usuário está logado e é admin
 if (!is_logged_in() || !is_admin()) {
@@ -15,36 +23,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? null;
     $user_id = (int)($_POST['user_id'] ?? 0);
     
-    if ($action === 'ban_user' && $user_id > 0) {
-        $result = pg_query_params($dbconn, 
-            "UPDATE users SET is_banned = true WHERE id = $1 AND id != $2", 
-            [$user_id, $_SESSION['user_id']]
-        );
-        $_SESSION['success'] = $result ? "Usuário banido com sucesso!" : "Erro ao banir usuário.";
-    }
-    
-    if ($action === 'unban_user' && $user_id > 0) {
-        $result = pg_query_params($dbconn, 
-            "UPDATE users SET is_banned = false WHERE id = $1", 
-            [$user_id]
-        );
-        $_SESSION['success'] = $result ? "Usuário desbanido com sucesso!" : "Erro ao desbanir usuário.";
-    }
-    
-    if ($action === 'promote_admin' && $user_id > 0) {
-        $result = pg_query_params($dbconn, 
-            "UPDATE users SET is_admin = true WHERE id = $1 AND id != $2", 
-            [$user_id, $_SESSION['user_id']]
-        );
-        $_SESSION['success'] = $result ? "Usuário promovido a admin!" : "Erro ao promover usuário.";
-    }
-    
-    if ($action === 'demote_admin' && $user_id > 0) {
-        $result = pg_query_params($dbconn, 
-            "UPDATE users SET is_admin = false WHERE id = $1 AND id != $2", 
-            [$user_id, $_SESSION['user_id']]
-        );
-        $_SESSION['success'] = $result ? "Admin removido com sucesso!" : "Erro ao remover admin.";
+    if ($action && $user_id > 0) {
+        try {
+            switch ($action) {
+                case 'ban_user':
+                    if ($user_id != $_SESSION['user_id']) {
+                        $result = pg_query_params($dbconn, 
+                            "UPDATE users SET is_banned = true WHERE id = $1", 
+                            [$user_id]
+                        );
+                        $_SESSION['success'] = $result ? "Usuário banido com sucesso!" : "Erro ao banir usuário.";
+                    }
+                    break;
+                    
+                case 'unban_user':
+                    $result = pg_query_params($dbconn, 
+                        "UPDATE users SET is_banned = false WHERE id = $1", 
+                        [$user_id]
+                    );
+                    $_SESSION['success'] = $result ? "Usuário desbanido com sucesso!" : "Erro ao desbanir usuário.";
+                    break;
+                    
+                case 'promote_admin':
+                    if ($user_id != $_SESSION['user_id']) {
+                        $result = pg_query_params($dbconn, 
+                            "UPDATE users SET is_admin = true WHERE id = $1", 
+                            [$user_id]
+                        );
+                        $_SESSION['success'] = $result ? "Usuário promovido a admin!" : "Erro ao promover usuário.";
+                    }
+                    break;
+                    
+                case 'demote_admin':
+                    if ($user_id != $_SESSION['user_id']) {
+                        $result = pg_query_params($dbconn, 
+                            "UPDATE users SET is_admin = false WHERE id = $1", 
+                            [$user_id]
+                        );
+                        $_SESSION['success'] = $result ? "Admin removido com sucesso!" : "Erro ao remover admin.";
+                    }
+                    break;
+            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = "Erro ao processar ação: " . $e->getMessage();
+        }
     }
     
     header("Location: dashboard.php");
@@ -71,23 +93,35 @@ $stats = [
     'avg_comments_per_post' => 0,
 ];
 
+// Função auxiliar para executar query com segurança
+function safe_query($dbconn, $query) {
+    $result = pg_query($dbconn, $query);
+    if ($result === false) {
+        error_log("Database error: " . pg_last_error($dbconn));
+        return null;
+    }
+    return $result;
+}
+
 // Queries de estatísticas
 $queries = [
-    'total_users' => "SELECT COUNT(*) FROM users",
+    'total_users' => "SELECT COUNT(*) FROM users WHERE is_banned = false",
     'active_users' => "SELECT COUNT(*) FROM users WHERE is_banned = false",
     'banned_users' => "SELECT COUNT(*) FROM users WHERE is_banned = true",
     'admin_users' => "SELECT COUNT(*) FROM users WHERE is_admin = true",
     'total_posts' => "SELECT COUNT(*) FROM posts",
     'total_comments' => "SELECT COUNT(*) FROM comments",
     'total_upvotes' => "SELECT COUNT(*) FROM post_upvotes",
-    'avg_posts_per_user' => "SELECT ROUND(COALESCE(AVG(post_count), 0)) FROM (SELECT COUNT(*) as post_count FROM posts GROUP BY user_id) sq",
-    'avg_comments_per_post' => "SELECT ROUND(COALESCE(AVG(comment_count), 0)) FROM (SELECT COUNT(*) as comment_count FROM comments GROUP BY post_id) sq",
+    'avg_posts_per_user' => "SELECT ROUND(COALESCE(AVG(post_count), 0)::numeric)::integer FROM (SELECT COUNT(*) as post_count FROM posts GROUP BY user_id) sq",
+    'avg_comments_per_post' => "SELECT ROUND(COALESCE(AVG(comment_count), 0)::numeric)::integer FROM (SELECT COUNT(*) as comment_count FROM comments GROUP BY post_id) sq",
 ];
 
 foreach ($queries as $key => $query) {
-    $result = pg_query($dbconn, $query);
+    $result = safe_query($dbconn, $query);
     if ($result) {
-        $stats[$key] = pg_fetch_result($result, 0, 0) ?? 0;
+        $value = pg_fetch_result($result, 0, 0);
+        $stats[$key] = isset($value) ? (int)$value : 0;
+        pg_free_result($result);
     }
 }
 
@@ -102,14 +136,15 @@ FROM posts
 WHERE created_at >= CURRENT_DATE - INTERVAL '8 weeks'
 GROUP BY DATE_TRUNC('week', created_at)
 ORDER BY week";
-$week_result = pg_query($dbconn, $week_query);
+$week_result = safe_query($dbconn, $week_query);
 if ($week_result) {
     while ($row = pg_fetch_assoc($week_result)) {
         $posts_by_week[] = [
-            'week' => date('d/m', strtotime($row['week'])),
-            'count' => $row['count']
+            'week' => isset($row['week']) ? date('d/m', strtotime($row['week'])) : 'N/A',
+            'count' => isset($row['count']) ? (int)$row['count'] : 0
         ];
     }
+    pg_free_result($week_result);
 }
 
 // Atividade de usuários (últimos 7 dias)
@@ -121,53 +156,49 @@ FROM posts
 WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
 GROUP BY DATE(created_at)
 ORDER BY date";
-$activity_result = pg_query($dbconn, $activity_query);
+$activity_result = safe_query($dbconn, $activity_query);
 if ($activity_result) {
     while ($row = pg_fetch_assoc($activity_result)) {
         $users_activity[] = [
-            'date' => date('d/m', strtotime($row['date'])),
-            'count' => $row['count']
+            'date' => isset($row['date']) ? date('d/m', strtotime($row['date'])) : 'N/A',
+            'count' => isset($row['count']) ? (int)$row['count'] : 0
         ];
     }
+    pg_free_result($activity_result);
 }
 
 // Top usuários por posts
 $top_users = [];
-$top_users_query = "SELECT u.username, COUNT(p.id) as post_count
+$top_users_query = "SELECT 
+    u.id,
+    u.username, 
+    COUNT(p.id) as post_count
 FROM users u
 LEFT JOIN posts p ON u.id = p.user_id
+WHERE u.is_banned = false
 GROUP BY u.id, u.username
 ORDER BY post_count DESC
 LIMIT 10";
-$top_users_result = pg_query($dbconn, $top_users_query);
+$top_users_result = safe_query($dbconn, $top_users_query);
 if ($top_users_result) {
     while ($row = pg_fetch_assoc($top_users_result)) {
-        $top_users[] = $row;
+        $top_users[] = [
+            'username' => htmlspecialchars($row['username']),
+            'post_count' => (int)$row['post_count']
+        ];
     }
+    pg_free_result($top_users_result);
 }
 
 // =============== ANÁLISE DE SEGURANÇA ===============
 $security_issues = [];
-
-// Verificar usuários sem avatars
-$no_avatar_query = "SELECT COUNT(*) FROM users WHERE profile_picture IS NULL OR profile_picture = ''";
-$no_avatar_result = pg_query($dbconn, $no_avatar_query);
-$no_avatar_count = pg_fetch_result($no_avatar_result, 0, 0);
-if ($no_avatar_count > 0) {
-    $security_issues[] = [
-        'type' => 'info',
-        'title' => 'Usuários sem foto de perfil',
-        'description' => "$no_avatar_count usuários não possuem foto de perfil",
-        'severity' => 'low'
-    ];
-}
 
 // Verificar contas banidas
 if ($stats['banned_users'] > 0) {
     $security_issues[] = [
         'type' => 'warning',
         'title' => 'Contas banidas ativas',
-        'description' => $stats['banned_users'] . " contas foram banidas",
+        'description' => $stats['banned_users'] . " conta(s) foram banida(s)",
         'severity' => 'medium'
     ];
 }
@@ -176,14 +207,25 @@ if ($stats['banned_users'] > 0) {
 if ($stats['admin_users'] > 3) {
     $security_issues[] = [
         'type' => 'info',
-        'title' => 'Muitos admins',
+        'title' => 'Muitos admins no sistema',
         'description' => $stats['admin_users'] . " contas com permissões de admin",
         'severity' => 'low'
     ];
 }
 
+// Verificar usuários sem dados
+if ($stats['total_users'] === 0) {
+    $security_issues[] = [
+        'type' => 'warning',
+        'title' => 'Nenhum usuário cadastrado',
+        'description' => "O sistema ainda não tem usuários registrados",
+        'severity' => 'medium'
+    ];
+}
+
 // Listar usuários para gestão
-$users_result = pg_query($dbconn, "SELECT id, username, email, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC");
+$users_query = "SELECT id, username, email, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT 50";
+$users_result = safe_query($dbconn, $users_query);
 
 $json_posts_by_week = json_encode(array_values($posts_by_week));
 $json_users_activity = json_encode(array_values($users_activity));
@@ -475,31 +517,31 @@ $json_top_users = json_encode(array_values($top_users));
     <div class="stats-grid">
         <div class="stat-card">
             <h3>👥 Usuários Totais</h3>
-            <div class="number"><?php echo $stats['total_users']; ?></div>
-            <div class="label"><?php echo $stats['active_users']; ?> ativos • <?php echo $stats['banned_users']; ?> banidos</div>
+            <div class="number"><?php echo (int)$stats['total_users']; ?></div>
+            <div class="label"><?php echo (int)$stats['active_users']; ?> ativos • <?php echo (int)$stats['banned_users']; ?> banidos</div>
         </div>
 
         <div class="stat-card">
             <h3>📝 Posts</h3>
-            <div class="number"><?php echo $stats['total_posts']; ?></div>
-            <div class="label">Média: <?php echo $stats['avg_posts_per_user']; ?> por usuário</div>
+            <div class="number"><?php echo (int)$stats['total_posts']; ?></div>
+            <div class="label">Média: <?php echo (int)$stats['avg_posts_per_user']; ?> por usuário</div>
         </div>
 
         <div class="stat-card">
             <h3>💬 Comentários</h3>
-            <div class="number"><?php echo $stats['total_comments']; ?></div>
-            <div class="label">Média: <?php echo $stats['avg_comments_per_post']; ?> por post</div>
+            <div class="number"><?php echo (int)$stats['total_comments']; ?></div>
+            <div class="label">Média: <?php echo (int)$stats['avg_comments_per_post']; ?> por post</div>
         </div>
 
         <div class="stat-card">
             <h3>👍 Upvotes</h3>
-            <div class="number"><?php echo $stats['total_upvotes']; ?></div>
-            <div class="label">Engajamento do comunidade</div>
+            <div class="number"><?php echo (int)$stats['total_upvotes']; ?></div>
+            <div class="label">Engajamento da comunidade</div>
         </div>
 
         <div class="stat-card">
             <h3>🔧 Administradores</h3>
-            <div class="number"><?php echo $stats['admin_users']; ?></div>
+            <div class="number"><?php echo (int)$stats['admin_users']; ?></div>
             <div class="label">Contas com permissões elevadas</div>
         </div>
 
@@ -554,71 +596,87 @@ $json_top_users = json_encode(array_values($top_users));
     <!-- GESTÃO DE USUÁRIOS -->
     <div class="users-section">
         <h2>👥 Gestão de Usuários</h2>
-        <table class="users-table">
-            <thead>
-                <tr>
-                    <th>Usuário</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Data de Criação</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($user = pg_fetch_assoc($users_result)): ?>
+        <?php if (!$users_result): ?>
+            <p style="color: #999;">Erro ao carregar usuários.</p>
+        <?php else: ?>
+            <table class="users-table">
+                <thead>
                     <tr>
-                        <td><strong><?php echo htmlspecialchars($user['username']); ?></strong></td>
-                        <td><?php echo htmlspecialchars($user['email']); ?></td>
-                        <td>
-                            <?php if ($user['is_admin'] == 't'): ?>
-                                <span class="status-badge status-admin">👑 Admin</span>
-                            <?php endif; ?>
-                            <?php if ($user['is_banned'] == 't'): ?>
-                                <span class="status-badge status-banned">🚫 Banido</span>
-                            <?php else: ?>
-                                <span class="status-badge status-active">✅ Ativo</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?php echo date('d/m/Y H:i', strtotime($user['created_at'])); ?></td>
-                        <td>
-                            <div class="action-buttons">
-                                <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                    <?php if ($user['is_banned'] != 't'): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="ban_user">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="action-btn btn-ban" onclick="return confirm('Banir este usuário?');">🚫 Banir</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="unban_user">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="action-btn btn-unban">✅ Desbanir</button>
-                                        </form>
-                                    <?php endif; ?>
-
-                                    <?php if ($user['is_admin'] != 't'): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="promote_admin">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="action-btn btn-promote" onclick="return confirm('Promover e admin?');">👑 Admin</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="demote_admin">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="action-btn btn-demote" onclick="return confirm('Remover admin?');">👤 Remover</button>
-                                        </form>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <span style="color: #666;">Você (Admin Atual)</span>
-                                <?php endif; ?>
-                            </div>
-                        </td>
+                        <th>Usuário</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Data de Criação</th>
+                        <th>Ações</th>
                     </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php 
+                    $user_count = 0;
+                    while ($user = pg_fetch_assoc($users_result)): 
+                        $user_count++;
+                        $is_admin = ($user['is_admin'] === 't' || $user['is_admin'] === true);
+                        $is_banned = ($user['is_banned'] === 't' || $user['is_banned'] === true);
+                        $is_current = ($user['id'] == $_SESSION['user_id']);
+                    ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($user['username']); ?></strong></td>
+                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                            <td>
+                                <?php if ($is_admin): ?>
+                                    <span class="status-badge status-admin">👑 Admin</span>
+                                <?php endif; ?>
+                                <?php if ($is_banned): ?>
+                                    <span class="status-badge status-banned">🚫 Banido</span>
+                                <?php else: ?>
+                                    <span class="status-badge status-active">✅ Ativo</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($user['created_at'])); ?></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <?php if (!$is_current): ?>
+                                        <?php if (!$is_banned): ?>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="ban_user">
+                                                <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                <button type="submit" class="action-btn btn-ban" onclick="return confirm('Banir este usuário?');">🚫 Banir</button>
+                                            </form>
+                                        <?php else: ?>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="unban_user">
+                                                <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                <button type="submit" class="action-btn btn-unban">✅ Desbanir</button>
+                                            </form>
+                                        <?php endif; ?>
+
+                                        <?php if (!$is_admin): ?>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="promote_admin">
+                                                <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                <button type="submit" class="action-btn btn-promote" onclick="return confirm('Promover a admin?');">👑 Admin</button>
+                                            </form>
+                                        <?php else: ?>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="demote_admin">
+                                                <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                <button type="submit" class="action-btn btn-demote" onclick="return confirm('Remover admin?');">👤 Remover</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span style="color: #666;">Você (Admin Atual)</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    <?php if ($user_count === 0): ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #999;">Nenhum usuário encontrado</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 </div>
 
