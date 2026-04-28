@@ -82,7 +82,9 @@ class Renderer
 
     private function guessLayout(string $view): string
     {
-        return str_starts_with($view, 'admin/') ? 'admin' : 'main';
+        if (str_starts_with($view, 'admin/')) return 'admin';
+        if (str_starts_with($view, 'auth/'))  return 'minimal';
+        return 'main';
     }
 
     private function currentUser(): array

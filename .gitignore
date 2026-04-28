@@ -10,6 +10,7 @@ fix_banned_users.php
 # Ambiente e Configurações
 # ============================================
 .env
+.env.example
 .env.local
 .env.*.local
 *.env

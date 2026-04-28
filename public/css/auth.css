@@ -3,32 +3,60 @@ body.auth-page {
     background:
         radial-gradient(circle at 15% 15%, rgba(14, 134, 202, 0.16), transparent 38%),
         radial-gradient(circle at 85% 10%, rgba(78, 205, 196, 0.14), transparent 40%),
-        linear-gradient(180deg, #232323 0%, #1f1f1f 100%);
+        linear-gradient(180deg, #1a1a1a 0%, #161616 100%);
     color: #f1f1f1;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 0 !important;
 }
 
 .auth-page header {
-    position: sticky !important;
-    top: 0 !important;
-    padding: 18px 24px !important;
-    background: linear-gradient(135deg, rgba(18, 18, 18, 0.96), rgba(28, 28, 28, 0.94)) !important;
-    border-bottom: 1px solid rgba(78, 205, 196, 0.2) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: rgba(14, 14, 14, 0.7);
+    border-bottom: 1px solid rgba(78, 205, 196, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    flex-shrink: 0;
 }
 
 .auth-page header h1 {
     margin: 0;
-    font-size: clamp(1.5rem, 2vw, 2rem);
+    font-size: clamp(1.3rem, 2vw, 1.7rem);
     font-weight: 800;
     display: flex;
     align-items: center;
     gap: 10px;
     letter-spacing: 0.3px;
+    color: #ffffff;
 }
 
 .auth-page header h1 i {
     color: #4ecdc4;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 7px 12px;
+    transition: all 0.2s ease;
+}
+
+.back-link:hover {
+    color: #4ecdc4;
+    border-color: rgba(78, 205, 196, 0.35);
+    background: rgba(78, 205, 196, 0.06);
+    text-decoration: none;
 }
 
 .auth-main {
@@ -55,6 +83,15 @@ body.auth-page {
     -webkit-backdrop-filter: blur(4px);
 }
 
+.auth-section-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f3f4f6;
+    margin: 0 0 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(78, 205, 196, 0.15);
+}
+
 .auth-section form {
     display: grid;
     gap: 14px;
@@ -64,6 +101,12 @@ body.auth-page {
 .auth-section form > div {
     display: grid;
     gap: 7px;
+}
+
+.auth-section form small {
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin-top: 2px;
 }
 
 .auth-section label {
@@ -188,43 +231,33 @@ body.auth-page {
 }
 
 .auth-section > p {
-    margin: 8px 0;
-    color: #cfcfcf;
-    font-size: 0.96rem;
+    margin: 10px 0 4px;
+    color: #9ca3af;
+    font-size: 0.92rem;
+    text-align: center;
 }
 
-.auth-section a {
+.auth-section > p a {
     color: #4ecdc4;
     text-decoration: none;
     font-weight: 700;
     transition: color 0.2s ease;
 }
 
-.auth-section a:hover {
+.auth-section > p a:hover {
     color: #7ee5dd;
     text-decoration: underline;
-}
-
-.auth-section .back-link {
-    margin-top: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(78, 205, 196, 0.35);
-    border-radius: 10px;
-    padding: 9px 12px;
-    background: rgba(78, 205, 196, 0.08);
-}
-
-.auth-section .back-link:hover {
-    background: rgba(78, 205, 196, 0.15);
-    text-decoration: none;
 }
 
 .auth-page footer {
     margin-top: auto;
     border-top: 1px solid rgba(78, 205, 196, 0.1);
-    background: rgba(18, 18, 18, 0.9);
+    background: rgba(12, 12, 12, 0.6);
+    text-align: center;
+    padding: 18px;
+    color: #555;
+    font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
@@ -233,15 +266,15 @@ body.auth-page {
     }
 
     .auth-section {
-        padding: 18px;
+        padding: 20px 18px;
         border-radius: 14px;
     }
 
     .auth-page header {
-        padding: 14px 16px !important;
+        padding: 14px 18px;
     }
 
     .auth-page header h1 {
-        font-size: 1.45rem;
+        font-size: 1.25rem;
     }
 }
