@@ -26,6 +26,30 @@ use Slim\Routing\RouteCollectorProxy;
 return function (App $app): void {
 
     // ------------------------------------------------------------------
+    // Health check (Railway) — registered BEFORE global middleware
+    // so it does not trigger database-dependent DI resolution.
+    // ------------------------------------------------------------------
+    $app->get('/health', function ($request, $response) {
+        try {
+            \App\Database\Connection::getInstance()->fetchScalar('SELECT 1');
+            $status = 'healthy';
+            $code   = 200;
+        } catch (\Throwable $e) {
+            $status = 'unhealthy';
+            $code   = 503;
+        }
+
+        $response->getBody()->write(json_encode([
+            'status'    => $status,
+            'timestamp' => time(),
+        ]));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus($code);
+    });
+
+    // ------------------------------------------------------------------
     // Middlewares globais de segurança
     // ------------------------------------------------------------------
     $app->add(BannedMiddleware::class);
@@ -129,26 +153,4 @@ return function (App $app): void {
 
     })->add(AdminMiddleware::class)->add(AuthMiddleware::class);
 
-    // ------------------------------------------------------------------
-    // Health check (Railway)
-    // ------------------------------------------------------------------
-    $app->get('/health', function ($request, $response) {
-        try {
-            \App\Database\Connection::getInstance()->fetchScalar('SELECT 1');
-            $status = 'healthy';
-            $code   = 200;
-        } catch (\Throwable $e) {
-            $status = 'unhealthy';
-            $code   = 503;
-        }
-
-        $response->getBody()->write(json_encode([
-            'status'    => $status,
-            'timestamp' => time(),
-        ]));
-
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus($code);
-    });
 };
