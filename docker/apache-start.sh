@@ -30,13 +30,17 @@ cat > /etc/apache2/conf-available/block-sensitive-dirs.conf << 'EOF'
 EOF
 a2enconf block-sensitive-dirs >/dev/null
 
-# Ensure upload directory exists and has proper permissions
-mkdir -p /var/www/html/storage/uploads
-chmod 755 /var/www/html/storage/uploads
-chown www-data:www-data /var/www/html/storage/uploads
+# Garantir que storage e uploads existam com permissões corretas
+mkdir -p /var/www/html/storage/{logs,cache/di,uploads}
+mkdir -p /var/www/html/public/uploads
+chmod -R 755 /var/www/html/storage /var/www/html/public/uploads
+chown -R www-data:www-data /var/www/html/storage /var/www/html/public/uploads
 
-# Ensure PHP can write uploads
-chown -R www-data:www-data /var/www/html/storage/
+# DocumentRoot aponta para public/
+if ! grep -q 'DocumentRoot /var/www/html/public' /etc/apache2/sites-available/000-default.conf; then
+    sed -ri 's|DocumentRoot /var/www/html$|DocumentRoot /var/www/html/public|g' \
+        /etc/apache2/sites-available/000-default.conf
+fi
 
 echo "[startup] Apache MPM symlinks:"
 ls -1 /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true
