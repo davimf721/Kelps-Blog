@@ -11,6 +11,7 @@
     <link rel="icon" href="/images/favicon.ico">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/posts.css">
+    <link rel="stylesheet" href="/css/landing.css">
     <?php if (!empty($extraCss)): ?>
         <link rel="stylesheet" href="/css/<?= htmlspecialchars($extraCss) ?>">
     <?php endif; ?>
